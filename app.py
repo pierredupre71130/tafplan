@@ -123,6 +123,7 @@ CARE_VERBS_PREFIX = [
     'ABLATION ', 'CHANGEMENT ', 'KINE ', 'BILAN ',
     'LEVER ', 'HYDRATATION ', 'STIMULATION ', 'ENSEIGNANT ',
     'PRISE EN CHARGE ', 'BARRIERES ', 'SANGLE ', 'CONTENTIONS ',
+    'COMPLEMENT ',
 ]
 
 # Mots-clés présents dans la ligne → acte infirmier
@@ -136,7 +137,6 @@ CARE_KEYWORDS_CONTAINS = [
 CARE_ACT_BLACKLIST = [
     r'^AIDE A LA PRISE',       # Aide à la prise de médicaments
     r'^REFECTION PANSEMENT',   # Réfection pansement
-    r'^COMPLEMENT',            # Complément alimentaire
     r'^DISTRIBUTION',          # Distribution médicaments
     r'^ENSEIGNANT',            # Enseignant APA
     r'^OPTIFIBRE',
@@ -614,6 +614,7 @@ CATEGORY_RULES = [
     ("Lever", ["LEVER", "FAUTEUIL"]),
     ("Hydratation", ["HYDRATATION", "BOISSON", "STIMULATION"]),
     ("Enseignement", ["ENSEIGNANT", "APA"]),
+    ("Compléments alimentaires", ["COMPLEMENT", "FORTIMEL", "CALCIDOSE", "OPTIFIBRE", "PROTEINE", "NUTRITION", "DIETETIQUE"]),
     ("Traitements si besoin", ["TRAITEMENT SI BESOIN"]),
 ]
 
