@@ -122,7 +122,7 @@ CARE_VERBS_PREFIX = [
     'ASPIRATION ', 'SONDAGE ', 'PROTECTION ',
     'ABLATION ', 'CHANGEMENT ', 'KINE ', 'BILAN ',
     'LEVER ', 'HYDRATATION ', 'STIMULATION ', 'ENSEIGNANT ',
-    'PRISE EN CHARGE ',
+    'PRISE EN CHARGE ', 'BARRIERES ', 'SANGLE ', 'CONTENTIONS ',
 ]
 
 # Mots-clés présents dans la ligne → acte infirmier
@@ -134,18 +134,11 @@ CARE_KEYWORDS_CONTAINS = [
 
 # Patterns à exclure (actes non souhaités)
 CARE_ACT_BLACKLIST = [
-    r'CONTENTION',             # Ablation/Pose bas/chaussettes de contention
     r'^AIDE A LA PRISE',       # Aide à la prise de médicaments
     r'^REFECTION PANSEMENT',   # Réfection pansement
     r'^COMPLEMENT',            # Complément alimentaire
     r'^DISTRIBUTION',          # Distribution médicaments
     r'^ENSEIGNANT',            # Enseignant APA
-    r'^SANGLE',                # Sangle ventrale
-    r'^MATELAS',               # Matelas anti-escarres
-    r'^BARRIERES',             # Barrières au lit
-    r'^CONTENTIONS',           # Contentions fauteuil/lit
-    r'^CHANGEMENT FREESTYLE',  # Changement capteur glycémie
-    r'^CHANGEMENT SUPPORT',    # Changement support stomie
     r'^OPTIFIBRE',
     r'^REGIME',
     r'^PROTECTION ',
@@ -614,7 +607,8 @@ CATEGORY_RULES = [
     ("Pose / Ablation", ["POSE ", "ABLATION", "CHANGEMENT", "ATTELLE", "CHAUSSETTES DE CONTENTION", "SANGLE", "MATELAS"]),
     ("Soins locaux", ["PANSEMENT", "STOMIE", "ASPIRATION", "SONDAGE", "PROTECTION"]),
     ("Kinésithérapie", ["KINE", "KINÉ", "MOBILISATION", "MARCHE"]),
-    ("Contentions", ["CONTENTION", "CONTENTIONS", "BANDES", "BAS", "CHAUSSETTES"]),
+    ("Contentions", ["BANDES", "BAS", "CHAUSSETTES"]),
+    ("Contentions physiques", ["SANGLE", "CONTENTION", "CONTENTIONS", "BARRIERES", "BARRIERE"]),
     ("Ergothérapie", ["ERGO", "ERGOTHÉRAPIE", "PRISE EN CHARGE ERGO"]),
     ("Psychologue", ["PSYCHOLOGUE", "BILAN PSYCHO"]),
     ("Lever", ["LEVER", "FAUTEUIL"]),
