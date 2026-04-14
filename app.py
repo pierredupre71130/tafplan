@@ -327,20 +327,21 @@ def extract_medication_care_acts(block: str, patient: str, room: str,
     # ── Traitements si besoin ─────────────────────────────────────────────────
     if 'si besoin' in lower and not any(keyword in lower for keyword in ['collyre', 'insuline', 'perfusion', 'voie iv', 'intraveineux', 'voie veineuse']):
         times = _times_in_range(block, heure_debut, heure_fin)
-        # Extraire le nom du médicament : ligne avec dosage
+        # Extraire le nom du médicament : première ligne appropriée
         lines = [l.strip() for l in block.split('\n') if l.strip()]
         drug_line = next(
-            (l for l in lines if re.search(r'\d+\s*(mg|g|ml|ui|unit|µg|mcg|UI|ML|MG|G)', l, re.I)), None
+            (l for l in lines if len(l) > 5 and not re.match(r'^\d', l) and l not in ('c', 'g', 'h', 'j') and 'si besoin' not in l.lower()), None
         )
         if drug_line:
-            # Extraire le nom avant le dosage
+            # Essayer d'extraire le nom avant le dosage
             match = re.search(r'^(.+?)\s*\d+', drug_line.strip())
             if match:
-                drug_name = match.group(1).strip().title()
+                drug_name = match.group(1).strip()
             else:
-                drug_name = drug_line.strip().title()
+                drug_name = drug_line.strip()
+            drug_name = drug_name.title()
             # Si marque entre parenthèses, l'utiliser
-            brand_match = re.search(r'\(([A-Z][A-Z0-9\s\-]+)\)', drug_line)
+            brand_match = re.search(r'\(([A-Z][A-Z0-9\s\-]+)\)', drug_name)
             if brand_match:
                 drug_name = brand_match.group(1).strip().title()
         else:
