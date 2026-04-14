@@ -569,6 +569,48 @@ def sort_soins(soins: list) -> list:
     return sorted(soins, key=sort_key)
 
 
+CATEGORY_RULES = [
+    ("Collyre", ["COLLYRE", "OPHTALMIQUE", "YEUX", "OCULAIRE"]),
+    ("Injection / SC", ["INJECTION", "VOIE SC", "SC ", "SANS SC", "SOUSTCUT", "SOUS CUTAN"]),
+    ("Perfusion / IV", ["PERFUSION", "INTRAVEINEUX", "VOIE IV", "IV", "VEINEUSE"]),
+    ("Surveillance", ["SURVEILLANCE", "SURV", "GLYCEMIE", "DEXTRO", "CONSTANTES", "TENSION", "OXYGENE", "DIURESE", "PESEE", "PESÉE"]),
+    ("Évaluation", ["EVALUATION", "BILAN", "DOULEUR"]),
+    ("Aide à la prise", ["AIDE A LA PRISE", "ACTE DE LA VIE COURANTE"]),
+    ("Pose / Ablation", ["POSE ", "ABLATION", "CHANGEMENT", "ATTELLE", "CHAUSSETTES DE CONTENTION", "SANGLE", "MATELAS"]),
+    ("Soins locaux", ["PANSEMENT", "STOMIE", "ASPIRATION", "SONDAGE", "PROTECTION"]),
+]
+
+
+def categorize_care_act(description: str) -> str:
+    text = (description or "").upper()
+    for category, keywords in CATEGORY_RULES:
+        if any(keyword in text for keyword in keywords):
+            return category
+    return "Autres actes"
+
+
+def assign_care_categories(soins: list) -> list:
+    for soin in soins:
+        soin["category"] = categorize_care_act(soin.get("description", ""))
+    return soins
+
+
+def filter_soins(soins: list, categories: list, query: str) -> list:
+    q = (query or "").strip().lower()
+    filtered = []
+    for soin in soins:
+        if categories and soin.get("category") not in categories:
+            continue
+        if q:
+            searchable = (
+                f"{soin.get('resident','')} {soin.get('description','')} {soin.get('category','')}"
+            ).lower()
+            if q not in searchable:
+                continue
+        filtered.append(soin)
+    return filtered
+
+
 def format_heure(heure_str) -> str:
     if not heure_str or heure_str == '—':
         return '—'
@@ -591,11 +633,13 @@ def render_soins_table(soins: list):
     for s in soins:
         heure_display = format_heure(s.get('heure'))
         resident = s.get('resident') or 'Résident non identifié'
+        category = s.get('category') or 'Non renseignée'
         description = s.get('description') or ''
         rows += f"""
         <tr>
             <td class="heure-cell">{heure_display}</td>
             <td class="resident-cell">{resident}</td>
+            <td>{category}</td>
             <td>{description}</td>
         </tr>"""
 
@@ -605,6 +649,7 @@ def render_soins_table(soins: list):
             <tr>
                 <th>Heure</th>
                 <th>Résident(e)</th>
+                <th>Catégorie</th>
                 <th>Acte de soin</th>
             </tr>
         </thead>
@@ -656,16 +701,17 @@ def generate_pdf(soins: list, heure_debut: str, heure_fin: str, date_str: str) -
     ))
     elements.append(Spacer(1, 0.2 * cm))
 
-    header = ["Heure", "Résident(e)", "Acte de soin"]
+    header = ["Heure", "Résident(e)", "Catégorie", "Acte de soin"]
     table_data = [header]
     for s in soins:
         table_data.append([
             format_heure(s.get('heure')),
             s.get('resident') or 'Non identifié',
+            s.get('category') or 'Non renseignée',
             s.get('description') or '',
         ])
 
-    col_widths = [3 * cm, 6.5 * cm, 8.5 * cm]
+    col_widths = [2.5 * cm, 5 * cm, 4 * cm, 7.5 * cm]
     t = Table(table_data, colWidths=col_widths, repeatRows=1)
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), orange),
@@ -822,9 +868,13 @@ def main():
         else:
             soins = candidates  # Extraction Python directe, libellés déjà formatés
 
+        soins = assign_care_categories(soins)
         soins = sort_soins(soins)
+        categories = sorted({s.get("category", "Autres actes") for s in soins})
 
         st.session_state["soins_results"] = soins
+        st.session_state["category_filter"] = categories
+        st.session_state["search_query"] = ""
         st.session_state["last_params"] = {
             "debut": debut_str,
             "fin": fin_str,
@@ -837,6 +887,10 @@ def main():
     if st.session_state["soins_results"] is not None:
         soins = st.session_state["soins_results"]
         params = st.session_state["last_params"]
+        categories = sorted({s.get("category", "Autres actes") for s in soins})
+
+        if "category_filter" not in st.session_state or not st.session_state["category_filter"]:
+            st.session_state["category_filter"] = categories
 
         mode = "IA Groq" if params.get("used_llm") else "Extraction Python"
         st.markdown(
@@ -849,14 +903,38 @@ def main():
             f"{params.get('nb_pages', '?')} pages analysées  |  Mode : {mode}"
         )
 
-        render_soins_table(soins)
+        with st.expander("🔎 Recherche et filtres", expanded=True):
+            search_query = st.text_input(
+                "Recherche mots-clés",
+                value=st.session_state.get("search_query", ""),
+                key="search_query",
+                placeholder="Ex. douleur, perfusion, Mme Dupont",
+                help="Filtrer les soins par résident, acte ou catégorie.",
+            )
+            if st.button("Restaurer le filtre de base"):
+                st.session_state["category_filter"] = categories
+            selected_categories = st.multiselect(
+                "Catégories à afficher",
+                options=categories,
+                default=st.session_state.get("category_filter", categories),
+                key="category_filter",
+                help="Ce qui est coché par défaut correspond à la recherche de base.",
+            )
+            st.caption(
+                "Les catégories cochées par défaut correspondent à la recherche de base. "
+                "Décochez une catégorie pour affiner la recherche."
+            )
 
-        if soins:
+        filtered_soins = filter_soins(soins, selected_categories, st.session_state.get("search_query", ""))
+        st.markdown(f"**Résultats filtrés : {len(filtered_soins)} / {len(soins)} soin(s)**")
+        render_soins_table(filtered_soins)
+
+        if filtered_soins:
             st.divider()
             date_str = datetime.now().strftime("%d/%m/%Y à %Hh%M")
             with st.spinner("Génération du PDF…"):
                 pdf_bytes_export = generate_pdf(
-                    soins,
+                    filtered_soins,
                     params.get("debut", ""),
                     params.get("fin", ""),
                     date_str,
