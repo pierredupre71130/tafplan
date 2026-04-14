@@ -938,18 +938,21 @@ def main():
                 placeholder="Ex. douleur, perfusion, Mme Dupont",
                 help="Filtrer les soins par résident, acte ou catégorie.",
             )
+            st.markdown("**Catégories à afficher**")
             if st.button("Restaurer le filtre de base"):
                 st.session_state["category_filter"] = categories
-            selected_categories = st.multiselect(
-                "Catégories à afficher",
-                options=categories,
-                default=st.session_state.get("category_filter", categories),
-                key="category_filter",
-                help="Ce qui est coché par défaut correspond à la recherche de base.",
-            )
+            # Système de checkboxes pour les catégories
+            selected_categories = []
+            cols = st.columns(3)  # 3 colonnes pour organiser les checkboxes
+            for i, cat in enumerate(categories):
+                col = cols[i % 3]
+                default_checked = cat in st.session_state.get("category_filter", categories)
+                if col.checkbox(cat, value=default_checked, key=f"cat_{cat}"):
+                    selected_categories.append(cat)
+            st.session_state["category_filter"] = selected_categories  # Mettre à jour l'état de session
             st.caption(
-                "Les catégories cochées par défaut correspondent à la recherche de base. "
-                "Décochez une catégorie pour affiner la recherche."
+                "Cochez/décochez les catégories à afficher. Le bouton 'Restaurer le filtre de base' "
+                "sélectionne toutes les catégories."
             )
 
         filtered_soins = filter_soins(soins, selected_categories, st.session_state.get("search_query", ""))
