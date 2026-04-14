@@ -314,7 +314,8 @@ def extract_medication_care_acts(block: str, patient: str, room: str,
         lines = [l.strip() for l in block.split('\n') if l.strip()]
         drug_line = next(
             (l for l in lines if len(l) > 5 and not re.match(r'^\d', l)
-             and l not in ('c', 'g', 'h', 'j')), 'Perfusion IV'
+             and l not in ('c', 'g', 'h', 'j')
+             and not re.search(r'\b(gélule|comprimé|cp|capsule|sachet|ampoule|gel|sirop|pdr|cp séc|cp orodis)\b', l, re.I)), 'Perfusion IV'
         )
         desc = f"Perfusion IV — {drug_line[:40].rstrip('.,')}"
         if times:
@@ -326,17 +327,22 @@ def extract_medication_care_acts(block: str, patient: str, room: str,
     # ── Traitements si besoin ─────────────────────────────────────────────────
     if 'si besoin' in lower and not any(keyword in lower for keyword in ['collyre', 'insuline', 'perfusion', 'voie iv', 'intraveineux', 'voie veineuse']):
         times = _times_in_range(block, heure_debut, heure_fin)
-        # Extraire le nom du médicament : ligne avec marque entre parenthèses
+        # Extraire le nom du médicament : ligne avec dosage
         lines = [l.strip() for l in block.split('\n') if l.strip()]
         drug_line = next(
-            (l for l in lines if re.search(r'\([A-Z][A-Z0-9\s\-]+\)', l)), None
+            (l for l in lines if re.search(r'\d+\s*(mg|g|ml|ui|unit|µg|mcg|UI|ML|MG|G)', l, re.I)), None
         )
         if drug_line:
+            # Extraire le nom avant le dosage
+            match = re.search(r'^(.+?)\s*\d+', drug_line.strip())
+            if match:
+                drug_name = match.group(1).strip().title()
+            else:
+                drug_name = drug_line.strip().title()
+            # Si marque entre parenthèses, l'utiliser
             brand_match = re.search(r'\(([A-Z][A-Z0-9\s\-]+)\)', drug_line)
             if brand_match:
                 drug_name = brand_match.group(1).strip().title()
-            else:
-                drug_name = re.sub(r'\s*\d.*', '', drug_line).strip().title()
         else:
             drug_name = 'Médicament'
         desc = f"Traitement si besoin — {drug_name}"
