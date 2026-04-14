@@ -236,7 +236,7 @@ def _times_in_range(block: str, heure_debut: time, heure_fin: time) -> list:
     return result
 
 
-def extract_medication_care_acts(block: str, patient: str,
+def extract_medication_care_acts(block: str, patient: str, room: str,
                                   heure_debut: time, heure_fin: time) -> list:
     """
     Détecte dans un bloc de médicament les actes infirmiers implicites :
@@ -271,9 +271,9 @@ def extract_medication_care_acts(block: str, patient: str,
 
         if times:
             for t in times:
-                results.append({'resident': patient, 'heure': t, 'description': desc})
+                results.append({'resident': patient, 'room': room, 'heure': t, 'description': desc})
         else:
-            results.append({'resident': patient, 'heure': None, 'description': desc})
+            results.append({'resident': patient, 'room': room, 'heure': None, 'description': desc})
 
     # ── Injection SC insuline ─────────────────────────────────────────────────
     if ('voie sc' in lower or ', voie sc' in lower or 'sc,' in lower
@@ -301,10 +301,10 @@ def extract_medication_care_acts(block: str, patient: str,
 
         if times:
             for t in times:
-                results.append({'resident': patient, 'heure': t, 'description': desc})
+                results.append({'resident': patient, 'room': room, 'heure': t, 'description': desc})
         elif si_besoin or not times:
             # Insuline "si besoin" ou sans heure : inclure sans heure
-            results.append({'resident': patient, 'heure': None, 'description': desc})
+            results.append({'resident': patient, 'room': room, 'heure': None, 'description': desc})
 
     # ── Perfusion IV ──────────────────────────────────────────────────────────
     if 'perfusion' in lower or 'voie iv' in lower or 'intraveineux' in lower \
@@ -319,9 +319,9 @@ def extract_medication_care_acts(block: str, patient: str,
         desc = f"Perfusion IV — {drug_line[:40].rstrip('.,')}"
         if times:
             for t in times:
-                results.append({'resident': patient, 'heure': t, 'description': desc})
+                results.append({'resident': patient, 'room': room, 'heure': t, 'description': desc})
         else:
-            results.append({'resident': patient, 'heure': None, 'description': desc})
+            results.append({'resident': patient, 'room': room, 'heure': None, 'description': desc})
 
     # ── Traitements si besoin ─────────────────────────────────────────────────
     if 'si besoin' in lower and not any(keyword in lower for keyword in ['collyre', 'insuline', 'perfusion', 'voie iv', 'intraveineux', 'voie veineuse']):
@@ -342,9 +342,9 @@ def extract_medication_care_acts(block: str, patient: str,
         desc = f"Traitement si besoin — {drug_name}"
         if times:
             for t in times:
-                results.append({'resident': patient, 'heure': t, 'description': desc})
+                results.append({'resident': patient, 'room': room, 'heure': t, 'description': desc})
         else:
-            results.append({'resident': patient, 'heure': None, 'description': desc})
+            results.append({'resident': patient, 'room': room, 'heure': None, 'description': desc})
 
     return results
 
@@ -371,13 +371,17 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
         patient_match = re.search(r'Patient\s*:\s*(.+)', text)
         patient = format_patient_name(patient_match.group(1)) if patient_match else 'Résident inconnu'
 
+        # Chambre du patient
+        room_match = re.search(r'Chambre\s*:\s*(.+)', text)
+        room = room_match.group(1).strip() if room_match else 'Inconnue'
+
         # Découper en blocs de prescription (chaque bloc commence par "Début le")
         blocks = re.split(r'Début le \d{2}/\d{2}/\d{2,4} à \d{2}:\d{2}', text)
 
         for block in blocks[1:]:
             # ── Extraction spéciale AVANT le filtre médicament ───────────────
             # Collyres et injections SC : écrits comme médicaments mais = actes
-            for act in extract_medication_care_acts(block, patient, heure_debut, heure_fin):
+            for act in extract_medication_care_acts(block, patient, room, heure_debut, heure_fin):
                 key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
                 if key not in seen:
                     seen.add(key)
@@ -444,6 +448,7 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                         seen.add(key)
                         results.append({
                             'resident': patient,
+                            'room': room,
                             'heure': t_str,
                             'description': title_fr(act_name),
                         })
@@ -454,6 +459,7 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                     seen.add(key)
                     results.append({
                         'resident': patient,
+                        'room': room,
                         'heure': None,
                         'description': title_fr(act_name),
                     })
@@ -571,20 +577,23 @@ def normalize_with_groq(client: Groq, candidates: list) -> list:
     return candidates
 
 
-# ---------------------------------------------------------------------------
-# Tri des soins
-# ---------------------------------------------------------------------------
+def get_room_number(room_str: str) -> int:
+    match = re.search(r'(\d+)', room_str)
+    return int(match.group(1)) if match else 0
 
 def sort_soins(soins: list) -> list:
     def sort_key(s):
+        room_num = get_room_number(s.get('room', '0'))
         h = s.get('heure')
         if not h or h == '—':
-            return time(23, 59)
-        try:
-            parts = str(h).split(':')
-            return time(int(parts[0]), int(parts[1]))
-        except Exception:
-            return time(23, 59)
+            h_time = time(23, 59)
+        else:
+            try:
+                parts = str(h).split(':')
+                h_time = time(int(parts[0]), int(parts[1]))
+            except Exception:
+                h_time = time(23, 59)
+        return (room_num, h_time)
     return sorted(soins, key=sort_key)
 
 
@@ -622,15 +631,21 @@ def assign_care_categories(soins: list) -> list:
     return soins
 
 
-def filter_soins(soins: list, categories: list, query: str) -> list:
+def filter_soins(soins: list, categories: list, query: str, floor_filter: str) -> list:
     q = (query or "").strip().lower()
     filtered = []
     for soin in soins:
         if categories and soin.get("category") not in categories:
             continue
+        if floor_filter == "RDC (1-99)":
+            if get_room_number(soin.get('room', '0')) > 99:
+                continue
+        elif floor_filter == "1er étage (100+)":
+            if get_room_number(soin.get('room', '0')) < 100:
+                continue
         if q:
             searchable = (
-                f"{soin.get('resident','')} {soin.get('description','')} {soin.get('category','')}"
+                f"{soin.get('resident','')} {soin.get('room','')} {soin.get('description','')} {soin.get('category','')}"
             ).lower()
             if q not in searchable:
                 continue
@@ -660,11 +675,13 @@ def render_soins_table(soins: list):
     for s in soins:
         heure_display = format_heure(s.get('heure'))
         resident = s.get('resident') or 'Résident non identifié'
+        room = s.get('room') or 'Inconnue'
         category = s.get('category') or 'Non renseignée'
         description = s.get('description') or ''
         rows += f"""
         <tr>
             <td class="heure-cell">{heure_display}</td>
+            <td>{room}</td>
             <td class="resident-cell">{resident}</td>
             <td>{category}</td>
             <td>{description}</td>
@@ -675,6 +692,7 @@ def render_soins_table(soins: list):
         <thead>
             <tr>
                 <th>Heure</th>
+                <th>Chambre</th>
                 <th>Résident(e)</th>
                 <th>Catégorie</th>
                 <th>Acte de soin</th>
@@ -728,17 +746,18 @@ def generate_pdf(soins: list, heure_debut: str, heure_fin: str, date_str: str) -
     ))
     elements.append(Spacer(1, 0.2 * cm))
 
-    header = ["Heure", "Résident(e)", "Catégorie", "Acte de soin"]
+    header = ["Heure", "Chambre", "Résident(e)", "Catégorie", "Acte de soin"]
     table_data = [header]
     for s in soins:
         table_data.append([
             format_heure(s.get('heure')),
+            s.get('room') or 'Inconnue',
             s.get('resident') or 'Non identifié',
             s.get('category') or 'Non renseignée',
             s.get('description') or '',
         ])
 
-    col_widths = [2.5 * cm, 5 * cm, 4 * cm, 7.5 * cm]
+    col_widths = [2 * cm, 2.5 * cm, 4 * cm, 3 * cm, 6 * cm]
     t = Table(table_data, colWidths=col_widths, repeatRows=1)
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), orange),
@@ -954,8 +973,14 @@ def main():
                 "Cochez/décochez les catégories à afficher. Le bouton 'Restaurer le filtre de base' "
                 "sélectionne toutes les catégories."
             )
+            floor_filter = st.selectbox(
+                "Filtrer par étage",
+                options=["Tous", "RDC (1-99)", "1er étage (100+)"],
+                index=0,
+                help="Filtrer les résultats par étage. Les chambres 1-99 sont au RDC, 100+ au 1er étage."
+            )
 
-        filtered_soins = filter_soins(soins, selected_categories, st.session_state.get("search_query", ""))
+        filtered_soins = filter_soins(soins, selected_categories, st.session_state.get("search_query", ""), floor_filter)
         st.markdown(f"**Résultats filtrés : {len(filtered_soins)} / {len(soins)} soin(s)**")
         render_soins_table(filtered_soins)
 
