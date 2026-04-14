@@ -332,7 +332,7 @@ def extract_medication_care_acts(block: str, patient: str,
             (l for l in lines if re.search(r'\([A-Z][A-Z0-9\s\-]+\)', l)), None
         )
         if drug_line:
-            brand_match = re.search(r'\([A-Z][A-Z0-9\s\-]+\)', drug_line)
+            brand_match = re.search(r'\(([A-Z][A-Z0-9\s\-]+)\)', drug_line)
             if brand_match:
                 drug_name = brand_match.group(1).strip().title()
             else:
