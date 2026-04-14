@@ -112,25 +112,47 @@ def inject_css():
 
 
 # ---------------------------------------------------------------------------
-# Détection des actes de soins infirmiers
+# Détection des actes de soins infirmiers (actes en MAJUSCULES dans le PDF)
 # ---------------------------------------------------------------------------
 
-# Verbes / débuts caractéristiques d'un acte infirmier (en majuscules dans le PDF)
+# Préfixes d'actes infirmiers à détecter
 CARE_VERBS_PREFIX = [
-    'POSE ', 'ABLATION ', 'SURVEILLANCE ', 'EVALUATION ', 'AIDE ',
-    'CHANGEMENT ', 'REFECTION ', 'SOINS ', 'SOIN ', 'KINE ', 'KINÉ ',
-    'DISTRIBUTION ', 'STIMULATION ', 'BARRIERES ', 'CONTENTIONS ',
-    'PRISE EN CHARGE', 'SURV ', 'PST ', 'BILAN ', 'COMPLEMENT ALIMENTAIRE',
-    'MOBILISATION', 'ASPIRATION ', 'SONDAGE ', 'PROTECTION ',
-    'LEVER AU FAUTEUIL', 'MATELAS ANTI', 'SANGLE ', 'OPTIFIBRE',
-    'ENSEIGNANT APA', 'COMPLEMENT ORAL',
+    'SURVEILLANCE ', 'EVALUATION ', 'SOINS ', 'SOIN ',
+    'SURV ', 'PST ', 'CHANGEMENT POCHE', 'POSE ATTELLE',
+    'ASPIRATION ', 'SONDAGE ', 'PROTECTION ',
 ]
 
-# Mots-clés qui, s'ils apparaissent dans la ligne, indiquent un soin
+# Mots-clés présents dans la ligne → acte infirmier
 CARE_KEYWORDS_CONTAINS = [
-    'GLYCEMIE', 'DEXTRO', 'PANSEMENT', 'COLLYRE', 'TENSION',
+    'GLYCEMIE', 'DEXTRO', 'PANSEMENT', 'TENSION',
     'STOMIE', 'ESCARRE', 'OXYGENE', 'CONSTANTES', 'DIURESE',
-    'INSULINE', 'PESEE', 'FREESTYLE', 'CONTENTION',
+    'PESEE',
+]
+
+# Patterns à exclure (actes non souhaités)
+CARE_ACT_BLACKLIST = [
+    r'CONTENTION',             # Ablation/Pose bas/chaussettes de contention
+    r'^AIDE A LA PRISE',       # Aide à la prise de médicaments
+    r'^REFECTION PANSEMENT',   # Réfection pansement
+    r'^STIMULATION',           # Stimulation boisson
+    r'^LEVER\b',               # Lever au fauteuil
+    r'^COMPLEMENT',            # Complément alimentaire
+    r'^KINE', r'^KINÉ',        # Kinésithérapie
+    r'^BILAN',                 # Bilan psychologue
+    r'^DISTRIBUTION',          # Distribution médicaments
+    r'^ENSEIGNANT',            # Enseignant APA
+    r'^MOBILISATION',          # Mobilisation kiné
+    r'^SANGLE',                # Sangle ventrale
+    r'^MATELAS',               # Matelas anti-escarres
+    r'^BARRIERES',             # Barrières au lit
+    r'^CONTENTIONS',           # Contentions fauteuil/lit
+    r'^CHANGEMENT FREESTYLE',  # Changement capteur glycémie
+    r'^CHANGEMENT SUPPORT',    # Changement support stomie
+    r'^PRISE EN CHARGE',       # Prise en charge ergo
+    r'^OPTIFIBRE',
+    r'^HYDRATATION PER OS',
+    r'^REGIME',
+    r'^PROTECTION ',
 ]
 
 
@@ -138,6 +160,10 @@ def is_care_act(text: str) -> bool:
     u = text.upper().strip()
     if not u or len(u) < 5:
         return False
+    # Vérifier la blacklist en premier
+    for pattern in CARE_ACT_BLACKLIST:
+        if re.search(pattern, u):
+            return False
     if any(u.startswith(v) for v in CARE_VERBS_PREFIX):
         return True
     if any(kw in u for kw in CARE_KEYWORDS_CONTAINS):
@@ -148,22 +174,37 @@ def is_care_act(text: str) -> bool:
 def format_patient_name(raw: str) -> str:
     """Formate le nom du patient depuis le format PDF vers un format lisible."""
     raw = raw.strip()
-    # Format: "NOM (née PRENOM_JEUNE) PRENOM" ou "NOM (né ...) PRENOM"
-    match_f = re.search(r'^(.+?)\s*\(née?[^)]*\)\s*(.+)$', raw, re.IGNORECASE)
-    match_m = re.search(r'^(.+?)\s*\(né\s[^)]*\)\s*(.+)$', raw, re.IGNORECASE)
-    if match_f and 'née' in raw.lower():
-        last = match_f.group(1).strip().title()
-        first = match_f.group(2).strip().title()
+    # Format PDF : "NOM [MULTI] (née/né PRENOM_JEUNE) PRENOM"
+    # Exemples : "NYZAK (née DIEU) HENRIETTE"
+    #            "DE SOUSA MAGALHAES (né DE SOUSA MAGALHAE) CARLOS"
+    #            "DUPONT JEAN" (pas de parenthèses)
+
+    # Avec parenthèses et prénom après
+    m_f = re.search(r'^(.+?)\s*\(née?[^)]*\)\s+(\S.+)$', raw, re.IGNORECASE)
+    m_m = re.search(r'^(.+?)\s*\(né\s[^)]*\)\s+(\S.+)$', raw, re.IGNORECASE)
+
+    if m_f and 'née' in raw.lower():
+        last = m_f.group(1).strip().title()
+        first = m_f.group(2).strip().title()
         return f'Mme {first} {last}'
-    if match_m:
-        last = match_m.group(1).strip().title()
-        first = match_m.group(2).strip().title()
+    if m_m:
+        last = m_m.group(1).strip().title()
+        first = m_m.group(2).strip().title()
         return f'M. {first} {last}'
-    # Pas de parenthèses
+
+    # Parenthèses sans prénom après (nom tronqué dans le PDF)
+    m_trunc = re.search(r'^(.+?)\s*\(n[ée]', raw, re.IGNORECASE)
+    if m_trunc:
+        last = m_trunc.group(1).strip().title()
+        # Détecter le genre
+        civil = 'Mme' if 'née' in raw.lower() else 'M.'
+        return f'{civil} {last}'
+
+    # Pas de parenthèses : dernier mot = prénom, reste = nom
     words = raw.split()
     if len(words) >= 2:
-        last = words[0].title()
-        first = ' '.join(words[1:]).title()
+        first = words[-1].title()
+        last = ' '.join(words[:-1]).title()
         return f'{first} {last}'
     return raw.title()
 
@@ -180,6 +221,113 @@ def title_fr(text: str) -> str:
         else:
             result.append(w)
     return ' '.join(result).strip()
+
+
+# ---------------------------------------------------------------------------
+# Extraction spéciale : collyres et injections SC (écrits comme médicaments)
+# ---------------------------------------------------------------------------
+
+def _times_in_range(block: str, heure_debut: time, heure_fin: time) -> list:
+    """Retourne les heures HH:MM du bloc qui tombent dans la tranche."""
+    result = []
+    for t_str in re.findall(r'(\d{2}:\d{2})', block):
+        try:
+            h, m = map(int, t_str.split(':'))
+            if heure_debut <= time(h, m) <= heure_fin:
+                result.append(t_str)
+        except ValueError:
+            pass
+    return result
+
+
+def extract_medication_care_acts(block: str, patient: str,
+                                  heure_debut: time, heure_fin: time) -> list:
+    """
+    Détecte dans un bloc de médicament les actes infirmiers implicites :
+    - Instillation collyre (voie ophtalmique)
+    - Injection SC insuline
+    - Perfusion IV
+    """
+    lower = block.lower()
+    results = []
+
+    # ── Collyre ──────────────────────────────────────────────────────────────
+    if 'collyre' in lower and ('ophtalmique' in lower or 'goutte' in lower):
+        times = _times_in_range(block, heure_debut, heure_fin)
+        # Nom du médicament : (MARQUE) en parenthèses, ou nom sur la ligne avec "collyre"
+        brand = re.search(r'\(([A-Z][A-Z0-9\s\-]+)\)', block)
+        if brand:
+            drug_name = brand.group(1).strip().title()
+        else:
+            drug_name = 'collyre'
+            for line in block.split('\n'):
+                if 'collyre' in line.lower() and len(line.strip()) > 7:
+                    before = re.split(r'\bcollyre\b', line, flags=re.IGNORECASE)[0]
+                    before = before.strip().rstrip(' ,')
+                    before = re.sub(r'\s*\d[\d\s%/\.]*$', '', before).strip()
+                    if before:
+                        drug_name = before.title()
+                        break
+        # Note yeux (ex : "2 YEUX", "œil droit")
+        note_match = re.search(r'Note médecin\s*:\s*(.{3,40})', block, re.IGNORECASE)
+        note = f" — {note_match.group(1).strip().lower()}" if note_match else ''
+        desc = f"Instillation collyre ({drug_name}){note}"
+
+        if times:
+            for t in times:
+                results.append({'resident': patient, 'heure': t, 'description': desc})
+        else:
+            results.append({'resident': patient, 'heure': None, 'description': desc})
+
+    # ── Injection SC insuline ─────────────────────────────────────────────────
+    if ('voie sc' in lower or ', voie sc' in lower or 'sc,' in lower
+            or 'sous-cut' in lower or 'sous cutan' in lower) and 'insuline' in lower:
+        times = _times_in_range(block, heure_debut, heure_fin)
+        is_lente = 'lente' in lower or 'glargine' in lower or 'toujeo' in lower \
+                   or 'abasaglar' in lower or 'lantus' in lower or 'tresiba' in lower
+        is_rapide = 'rapide' in lower or 'asparte' in lower or 'novorapid' in lower \
+                    or 'humalog' in lower or 'apidra' in lower
+        si_besoin = 'si besoin' in lower or 'selon prot' in lower
+
+        if is_lente:
+            ins_type = 'Injection insuline lente SC'
+        elif is_rapide:
+            ins_type = 'Injection insuline rapide SC'
+        else:
+            ins_type = 'Injection insuline SC'
+
+        if si_besoin:
+            ins_type += ' (si besoin)'
+
+        dose_match = re.search(r'(\d+)\s*unité', lower)
+        dose = f" {dose_match.group(1)} UI" if dose_match else ''
+        desc = f"{ins_type}{dose}"
+
+        if times:
+            for t in times:
+                results.append({'resident': patient, 'heure': t, 'description': desc})
+        elif si_besoin or not times:
+            # Insuline "si besoin" ou sans heure : inclure sans heure
+            results.append({'resident': patient, 'heure': None, 'description': desc})
+
+    # ── Perfusion IV ──────────────────────────────────────────────────────────
+    if 'perfusion' in lower or 'voie iv' in lower or 'intraveineux' in lower \
+            or 'voie veineuse' in lower:
+        times = _times_in_range(block, heure_debut, heure_fin)
+        # Extraire le nom du médicament perfusé
+        lines = [l.strip() for l in block.split('\n') if l.strip()]
+        drug_line = next(
+            (l for l in lines if len(l) > 5 and not re.match(r'^\d', l)
+             and l not in ('c', 'g', 'h', 'j')), 'Perfusion IV'
+        )
+        desc = f"Perfusion IV — {drug_line[:40].rstrip('.,')}"
+        if times:
+            for t in times:
+                results.append({'resident': patient, 'heure': t, 'description': desc})
+        else:
+            results.append({'resident': patient, 'heure': None, 'description': desc})
+
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -208,7 +356,15 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
         blocks = re.split(r'Début le \d{2}/\d{2}/\d{2,4} à \d{2}:\d{2}', text)
 
         for block in blocks[1:]:
-            # Ignorer les blocs contenant des indicateurs de médicament
+            # ── Extraction spéciale AVANT le filtre médicament ───────────────
+            # Collyres et injections SC : écrits comme médicaments mais = actes
+            for act in extract_medication_care_acts(block, patient, heure_debut, heure_fin):
+                key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
+                if key not in seen:
+                    seen.add(key)
+                    results.append(act)
+
+            # ── Ignorer les blocs de médicaments ─────────────────────────────
             if re.search(r'\d+\s*(mg|mL|UI|µg|mcg|ug)\b', block[:300], re.I):
                 continue
             if re.search(
