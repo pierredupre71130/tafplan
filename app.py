@@ -120,6 +120,9 @@ CARE_VERBS_PREFIX = [
     'SURVEILLANCE ', 'EVALUATION ', 'SOINS ', 'SOIN ',
     'SURV ', 'PST ', 'CHANGEMENT POCHE', 'POSE ATTELLE',
     'ASPIRATION ', 'SONDAGE ', 'PROTECTION ',
+    'ABLATION ', 'CHANGEMENT ', 'KINE ', 'BILAN ',
+    'LEVER ', 'HYDRATATION ', 'STIMULATION ', 'ENSEIGNANT ',
+    'PRISE EN CHARGE ',
 ]
 
 # Mots-clés présents dans la ligne → acte infirmier
@@ -134,23 +137,16 @@ CARE_ACT_BLACKLIST = [
     r'CONTENTION',             # Ablation/Pose bas/chaussettes de contention
     r'^AIDE A LA PRISE',       # Aide à la prise de médicaments
     r'^REFECTION PANSEMENT',   # Réfection pansement
-    r'^STIMULATION',           # Stimulation boisson
-    r'^LEVER\b',               # Lever au fauteuil
     r'^COMPLEMENT',            # Complément alimentaire
-    r'^KINE', r'^KINÉ',        # Kinésithérapie
-    r'^BILAN',                 # Bilan psychologue
     r'^DISTRIBUTION',          # Distribution médicaments
     r'^ENSEIGNANT',            # Enseignant APA
-    r'^MOBILISATION',          # Mobilisation kiné
     r'^SANGLE',                # Sangle ventrale
     r'^MATELAS',               # Matelas anti-escarres
     r'^BARRIERES',             # Barrières au lit
     r'^CONTENTIONS',           # Contentions fauteuil/lit
     r'^CHANGEMENT FREESTYLE',  # Changement capteur glycémie
     r'^CHANGEMENT SUPPORT',    # Changement support stomie
-    r'^PRISE EN CHARGE',       # Prise en charge ergo
     r'^OPTIFIBRE',
-    r'^HYDRATATION PER OS',
     r'^REGIME',
     r'^PROTECTION ',
 ]
@@ -321,6 +317,31 @@ def extract_medication_care_acts(block: str, patient: str,
              and l not in ('c', 'g', 'h', 'j')), 'Perfusion IV'
         )
         desc = f"Perfusion IV — {drug_line[:40].rstrip('.,')}"
+        if times:
+            for t in times:
+                results.append({'resident': patient, 'heure': t, 'description': desc})
+        else:
+            results.append({'resident': patient, 'heure': None, 'description': desc})
+
+    # ── Traitements si besoin ─────────────────────────────────────────────────
+    if 'si besoin' in lower and not any(keyword in lower for keyword in ['collyre', 'insuline', 'perfusion', 'voie iv', 'intraveineux', 'voie veineuse']):
+        times = _times_in_range(block, heure_debut, heure_fin)
+        # Extraire le nom du médicament
+        lines = [l.strip() for l in block.split('\n') if l.strip()]
+        drug_line = next(
+            (l for l in lines if len(l) > 5 and not re.match(r'^\d', l)
+             and l not in ('c', 'g', 'h', 'j') and 'si besoin' in l.lower()), 'Traitement si besoin'
+        )
+        # Nettoyer le nom : enlever "si besoin" et après
+        drug_name = re.sub(r'\s*si besoin.*', '', drug_line, flags=re.IGNORECASE).strip()
+        # Extraire la marque si entre parenthèses
+        brand_match = re.search(r'\(([A-Z][A-Z0-9\s\-]+)\)', drug_name)
+        if brand_match:
+            drug_name = brand_match.group(1).strip().title()
+        else:
+            # Prendre le début avant les chiffres/dosages
+            drug_name = re.sub(r'\s*\d.*', '', drug_name).strip().title()
+        desc = f"Traitement si besoin — {drug_name}"
         if times:
             for t in times:
                 results.append({'resident': patient, 'heure': t, 'description': desc})
@@ -578,6 +599,14 @@ CATEGORY_RULES = [
     ("Aide à la prise", ["AIDE A LA PRISE", "ACTE DE LA VIE COURANTE"]),
     ("Pose / Ablation", ["POSE ", "ABLATION", "CHANGEMENT", "ATTELLE", "CHAUSSETTES DE CONTENTION", "SANGLE", "MATELAS"]),
     ("Soins locaux", ["PANSEMENT", "STOMIE", "ASPIRATION", "SONDAGE", "PROTECTION"]),
+    ("Kinésithérapie", ["KINE", "KINÉ", "MOBILISATION", "MARCHE"]),
+    ("Contentions", ["CONTENTION", "CONTENTIONS", "BANDES", "BAS", "CHAUSSETTES"]),
+    ("Ergothérapie", ["ERGO", "ERGOTHÉRAPIE", "PRISE EN CHARGE ERGO"]),
+    ("Psychologue", ["PSYCHOLOGUE", "BILAN PSYCHO"]),
+    ("Lever", ["LEVER", "FAUTEUIL"]),
+    ("Hydratation", ["HYDRATATION", "BOISSON", "STIMULATION"]),
+    ("Enseignement", ["ENSEIGNANT", "APA"]),
+    ("Traitements si besoin", ["TRAITEMENT SI BESOIN"]),
 ]
 
 
