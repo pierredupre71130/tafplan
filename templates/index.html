@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAFPLAN — Planning des soins</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: #FF6B00;
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .form-section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+
+        input[type="file"],
+        input[type="time"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        input[type="file"]:focus,
+        input[type="time"]:focus {
+            outline: none;
+            border-color: #FF6B00;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .categories-section {
+            margin-top: 30px;
+        }
+
+        .categories-section h3 {
+            margin-bottom: 15px;
+            color: #FF6B00;
+        }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #FF6B00;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        button {
+            padding: 14px 28px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #FF6B00;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #E55A00;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+        }
+
+        .btn-primary:disabled {
+            background-color: #FFBB80;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e0e0e0;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #FF6B00;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            display: none;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #FF6B00;
+        }
+
+        .results-header h2 {
+            color: #FF6B00;
+        }
+
+        .badge {
+            background-color: #FF6B00;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .patient-card {
+            background-color: #FFF8F3;
+            border-left: 4px solid #FF6B00;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+
+        .patient-header {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #1a1a1a;
+        }
+
+        .soin-item {
+            display: flex;
+            gap: 15px;
+            padding: 10px 0;
+            border-bottom: 1px solid #FFE0B2;
+        }
+
+        .soin-item:last-child {
+            border-bottom: none;
+        }
+
+        .soin-heure {
+            font-weight: 700;
+            color: #FF6B00;
+            white-space: nowrap;
+            min-width: 50px;
+        }
+
+        .soin-category {
+            display: inline-block;
+            background-color: #FFF3E0;
+            color: #FF6B00;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 8px;
+            margin-right: 8px;
+        }
+
+        .soin-description {
+            flex: 1;
+        }
+
+        .btn-export {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-export:hover {
+            background-color: #45a049;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .categories-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏥 TAFPLAN</h1>
+            <p>Planning des soins EHPAD — Analyse par tranche horaire</p>
+        </header>
+
+        <div class="form-section">
+            <form id="analysisForm">
+                <div class="form-group">
+                    <label for="pdfFile">📄 Importer le planning PDF</label>
+                    <input type="file" id="pdfFile" name="file" accept=".pdf" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="heureDebut">🕐 Heure de début</label>
+                        <input type="time" id="heureDebut" name="heure_debut" value="14:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="heureFin">🕐 Heure de fin</label>
+                        <input type="time" id="heureFin" name="heure_fin" value="20:00" required>
+                    </div>
+                </div>
+
+                <div class="categories-section">
+                    <h3>🏷️ Catégories à afficher</h3>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
+                        ✓ Cochez les catégories que vous voulez voir
+                    </p>
+                    <div class="categories-grid" id="categoriesGrid"></div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">🔍 Analyser</button>
+                    <button type="reset" class="btn-secondary">↻ Réinitialiser</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="error" id="errorMsg"></div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyse en cours...</p>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="results-header">
+                <h2>Résultats</h2>
+                <div>
+                    <span class="badge" id="resultCount">0 soin(s)</span>
+                    <button type="button" class="btn-export" id="exportBtn" style="margin-left: 15px;">⬇️ Télécharger PDF</button>
+                </div>
+            </div>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const categories = {{ categories | tojson }};
+        const resultsData = {};
+
+        // Remplir les checkboxes
+        const grid = document.getElementById('categoriesGrid');
+        categories.forEach(cat => {
+            const label = document.createElement('label');
+            label.className = 'checkbox-label';
+            label.innerHTML = `
+                <input type="checkbox" name="categories" value="${cat}">
+                <span>${cat}</span>
+            `;
+            grid.appendChild(label);
+        });
+
+        // Form submit
+        document.getElementById('analysisForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const form = document.getElementById('analysisForm');
+            const formData = new FormData(form);
+
+            // Vérifier heure
+            const h_d = parseInt(document.getElementById('heureDebut').value.split(':')[0]);
+            const h_f = parseInt(document.getElementById('heureFin').value.split(':')[0]);
+            if (h_d >= h_f) {
+                showError('L\'heure de fin doit être après l\'heure de début');
+                return;
+            }
+
+            // Récupérer catégories sélectionnées
+            const categories = [];
+            document.querySelectorAll('input[name="categories"]:checked').forEach(cb => {
+                categories.push(cb.value);
+            });
+            categories.forEach(cat => formData.append('categories[]', cat));
+
+            showLoading(true);
+            hideError();
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data);
+                    resultsData.soins = [];
+                    resultsData.heure_debut = data.heure_debut;
+                    resultsData.heure_fin = data.heure_fin;
+
+                    // Extraire tous les soins des patients
+                    data.patients.forEach(p => {
+                        p.soins.forEach(s => {
+                            resultsData.soins.push(s);
+                        });
+                    });
+                } else {
+                    showError(data.error || 'Erreur lors de l\'analyse');
+                }
+            } catch (err) {
+                showError('Erreur: ' + err.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        function displayResults(data) {
+            const content = document.getElementById('resultsContent');
+            content.innerHTML = '';
+
+            document.getElementById('resultCount').textContent = `${data.total} soin(s)`;
+
+            data.patients.forEach(patient => {
+                const card = document.createElement('div');
+                card.className = 'patient-card';
+
+                let room_str = patient.room ? `🚪 Ch. ${patient.room} &nbsp;|&nbsp; ` : '';
+                card.innerHTML = `<div class="patient-header">${room_str}👤 <strong>${patient.resident}</strong></div>`;
+
+                const soinsDiv = document.createElement('div');
+                patient.soins.forEach(soin => {
+                    const heure = soin.heure ? soin.heure.replace(':', 'h') : '—';
+                    const cat = soin.category || '';
+                    const catBadge = cat ? `<span class="soin-category">${cat}</span>` : '';
+
+                    const item = document.createElement('div');
+                    item.className = 'soin-item';
+                    item.innerHTML = `
+                        <span class="soin-heure">🕐 ${heure}</span>
+                        <span class="soin-description">${catBadge}${soin.description}</span>
+                    `;
+                    soinsDiv.appendChild(item);
+                });
+
+                card.appendChild(soinsDiv);
+                content.appendChild(card);
+            });
+
+            document.getElementById('resultsSection').style.display = 'block';
+        }
+
+        // Export PDF
+        document.getElementById('exportBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/export-pdf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(resultsData)
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `planning_soins_${resultsData.heure_debut.replace(':', 'h')}_${resultsData.heure_fin.replace(':', 'h')}.pdf`;
+                    a.click();
+                }
+            } catch (err) {
+                showError('Erreur lors du téléchargement: ' + err.message);
+            }
+        });
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(msg) {
+            const err = document.getElementById('errorMsg');
+            err.textContent = msg;
+            err.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMsg').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
