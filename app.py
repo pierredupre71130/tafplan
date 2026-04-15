@@ -187,13 +187,14 @@ def is_care_act(text: str) -> bool:
     u = text.upper().strip()
     if not u or len(u) < 5:
         return False
+    u = _normalize(u)
     # Vérifier la blacklist en premier
     for pattern in CARE_ACT_BLACKLIST:
         if re.search(pattern, u):
             return False
-    if any(u.startswith(v) for v in CARE_VERBS_PREFIX):
+    if any(_normalize(v) in u for v in CARE_VERBS_PREFIX):
         return True
-    if any(kw in u for kw in CARE_KEYWORDS_CONTAINS):
+    if any(_normalize(kw) in u for kw in CARE_KEYWORDS_CONTAINS):
         return True
     return False
 
