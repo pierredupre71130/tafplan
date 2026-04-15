@@ -657,11 +657,17 @@ def sort_soins(soins: list) -> list:
 
 
 CATEGORY_RULES = [
+    # Règles spécifiques en premier (évite les collisions avec les règles génériques)
+    ("Imagerie & ECG", ["RADIO", "SCANNER", "IRM", "ECG", "ECHO"]),
+    ("Prélèvements & Biologie", ["PRELEVEMENT", "PRISE DE SANG", "ECBU", "BIOLOGIE",
+                                  "HEMOCULTURE", "UROCULTURE", "BILAN COPRO", "BILAN SANGUIN",
+                                  "BILAN BIOLOGIQUE"]),
     ("Collyre", ["COLLYRE", "OPHTALMIQUE", "YEUX", "OCULAIRE"]),
     ("Injection / SC", ["INJECTION", "VOIE SC", "SC ", "SANS SC", "SOUSTCUT", "SOUS CUTAN"]),
     ("Perfusion / IV", ["PERFUSION", "INTRAVEINEUX", "VOIE IV", "IV", "VEINEUSE"]),
     ("Surveillance", ["SURVEILLANCE", "SURV", "GLYCEMIE", "DEXTRO", "CONSTANTES", "TENSION", "OXYGENE", "DIURESE", "PESEE", "PESÉE"]),
-    ("Évaluation", ["EVALUATION", "BILAN", "DOULEUR"]),
+    ("Psychologue", ["PSYCHOLOGUE", "BILAN PSYCHO"]),
+    ("Évaluation", ["EVALUATION", "DOULEUR"]),
     ("Aide à la prise", ["AIDE A LA PRISE", "ACTE DE LA VIE COURANTE"]),
     ("Pose / Ablation", ["POSE ", "ABLATION", "CHANGEMENT", "ATTELLE", "CHAUSSETTES DE CONTENTION", "SANGLE", "MATELAS"]),
     ("Soins locaux", ["PANSEMENT", "STOMIE", "ASPIRATION", "SONDAGE", "PROTECTION"]),
@@ -669,15 +675,10 @@ CATEGORY_RULES = [
     ("Contentions", ["BANDES", "BAS", "CHAUSSETTES"]),
     ("Contentions physiques", ["SANGLE", "CONTENTION", "CONTENTIONS", "BARRIERES", "BARRIERE"]),
     ("Ergothérapie", ["ERGO", "ERGOTHÉRAPIE", "PRISE EN CHARGE ERGO"]),
-    ("Psychologue", ["PSYCHOLOGUE", "BILAN PSYCHO"]),
     ("Lever", ["LEVER", "FAUTEUIL"]),
     ("Hydratation", ["HYDRATATION", "BOISSON", "STIMULATION"]),
     ("Enseignement", ["ENSEIGNANT APA", "ENSEIGNANT"]),
     ("Compléments alimentaires", ["COMPLEMENT", "FORTIMEL", "CALCIDOSE", "OPTIFIBRE", "PROTEINE", "NUTRITION", "DIETETIQUE"]),
-    ("Imagerie & ECG", ["RADIO", "SCANNER", "IRM", "ECG", "ECHO"]),
-    ("Prélèvements & Biologie", ["PRELEVEMENT", "PRISE DE SANG", "ECBU", "BIOLOGIE",
-                                  "ANALYSE", "EXAMEN", "HEMOCULTURE", "UROCULTURE",
-                                  "BILAN COPRO", "BILAN SANGUIN"]),
     ("Traitements si besoin", ["TRAITEMENT SI BESOIN"]),
 ]
 
@@ -979,7 +980,10 @@ def render_soins_table(soins: list):
 
         cards_html += f"<div class='care-card'><div class='care-card-resident' style='margin-bottom:8px'>{room_str}👤 <strong>{resident}</strong></div>{lignes}</div>"
 
-    st.markdown(cards_html, unsafe_allow_html=True)
+    if hasattr(st, "html"):
+        st.html(cards_html)
+    else:
+        st.markdown(cards_html, unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
@@ -1200,7 +1204,10 @@ def main():
                     cat_badge = f"<span style='background:#FFF3E0;color:#FF6B00;font-size:0.72rem;font-weight:600;padding:1px 6px;border-radius:8px;margin-right:5px'>{m['category']}</span>"
                     lignes += f"<div style='display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #FFF3E0;'><span>{cat_badge}{m['drug']}</span></div>"
                 cards += f"<div class='care-card'><div class='care-card-resident' style='margin-bottom:8px'>{room_str}👤 <strong>{resident}</strong></div>{lignes}</div>"
-            st.markdown(cards, unsafe_allow_html=True)
+            if hasattr(st, "html"):
+                st.html(cards)
+            else:
+                st.markdown(cards, unsafe_allow_html=True)
 
     # ════════════════════════════════════════════════════════════════════════════
     # ONGLET 1 — SOINS INFIRMIERS
