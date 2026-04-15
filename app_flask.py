@@ -416,27 +416,34 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                 description = 'Sangle ventrale'
 
             # Détection de compléments alimentaires dans le nom de l'acte
+            PRODUITS = ['FORTIMEL', 'CLINUTREN', 'OPTIFIBRE', 'RENUTRYL',
+                        'NUTRIDRINK', 'ENSURE', 'FRESUBIN', 'CUBITAN', 'DIASIP',
+                        'PROTEINE', 'FORTIFRESH', 'FORTEOCARE',
+                        'SUPPLEMENT', 'ALIMENTAIRE']
             is_complement = 'COMPLEMENT' in act_upper
             if not is_complement:
-                PRODUITS = ['FORTIMEL', 'OPTIFIBRE', 'CLINUTREN',
-                            'RENUTRYL', 'NUTRIDRINK', 'ENSURE', 'FRESUBIN',
-                            'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH',
-                            'SUPPLEMENT', 'ALIMENTAIRE', 'FORTEOCARE', 'DESSERT']
                 for prod in PRODUITS:
                     if prod in act_upper:
                         is_complement = True
                         break
 
             if is_complement:
-                note_m = re.search(r'Note m[eé]decin\s*:\s*(.{2,50})', block, re.IGNORECASE)
-                if note_m:
-                    produit = note_m.group(1).strip().rstrip('.,').title()
-                    description = f"Complément alimentaire ({produit})"
+                # Chercher le nom du produit connu dans le bloc (pas la Note médecin)
+                block_upper = block.upper()
+                product_found = None
+                for prod in PRODUITS:
+                    if prod in block_upper:
+                        product_found = prod
+                        break
+                if product_found:
+                    label = product_found.title()
+                    if 'DESSERT' in block_upper:
+                        label += ' Dessert'
+                    elif product_found == 'PROTEINE' and 'PROTEIN' in block_upper:
+                        label += ' Protéiné'
+                    description = f"Complément alimentaire ({label})"
                 else:
-                    for prod in PRODUITS:
-                        if prod in block.upper():
-                            description = f"Complément alimentaire ({prod.title()})"
-                            break
+                    description = 'Complément alimentaire'
 
             category = categorize_care_act(act_name)
 
@@ -451,7 +458,8 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                 except (ValueError, AttributeError):
                     pass
 
-            act_key = re.sub(r'\s+', ' ', act_name[:50].upper())
+            # Clé de dédoublonnage : description pour les compléments (pour matcher extract_dietary_supplements)
+            act_key = re.sub(r'\s+', ' ', description[:50].upper() if is_complement else act_name[:50].upper())
 
             if times_in_range:
                 for t_str in times_in_range:
