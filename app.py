@@ -487,6 +487,21 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                     seen.add(key)
                     results.append(act)
 
+            # ── Extraction spéciale pour les barrières (avec ou sans accents) ───
+            for line in block.split('\n'):
+                line_norm = _normalize(line.strip())
+                if 'BARRIERES MISES EN PLACE' in line_norm or 'BARRIERE MISES EN PLACE' in line_norm:
+                    key = (patient, 'BARRIERES MISES EN PLACE', None)
+                    if key not in seen:
+                        seen.add(key)
+                        results.append({
+                            'resident': patient,
+                            'room': room,
+                            'heure': None,
+                            'description': 'Barrières mises en place',
+                        })
+                    break
+
             # ── Ignorer les blocs de médicaments ─────────────────────────────
             # Exclure la note médecin du filtre (elle peut contenir "pdr", etc.)
             block_sans_note = re.split(r'Note m[eé]decin\s*:', block, flags=re.IGNORECASE)[0]
