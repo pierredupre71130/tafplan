@@ -1373,7 +1373,7 @@ def main():
             categories = sorted({s.get("category", "Autres actes") for s in soins})
 
             st.session_state["soins_results"] = soins
-            st.session_state["category_filter"] = categories
+            st.session_state["category_filter"] = []
             st.session_state["search_query"] = ""
             st.session_state["last_params"] = {
                 "debut": debut_str,
@@ -1389,8 +1389,8 @@ def main():
             params = st.session_state["last_params"]
             categories = sorted({s.get("category", "Autres actes") for s in soins})
 
-            if "category_filter" not in st.session_state or not st.session_state["category_filter"]:
-                st.session_state["category_filter"] = categories
+            if "category_filter" not in st.session_state:
+                st.session_state["category_filter"] = []
 
             mode = "IA Groq" if params.get("used_llm") else "Extraction Python"
             st.markdown(
@@ -1419,7 +1419,7 @@ def main():
                 cols = st.columns(3)  # 3 colonnes pour organiser les checkboxes
                 for i, cat in enumerate(categories):
                     col = cols[i % 3]
-                    default_checked = cat in st.session_state.get("category_filter", categories)
+                    default_checked = cat in st.session_state.get("category_filter", [])
                     if col.checkbox(cat, value=default_checked, key=f"cat_{cat}"):
                         selected_categories.append(cat)
                 st.session_state["category_filter"] = selected_categories  # Mettre à jour l'état de session
