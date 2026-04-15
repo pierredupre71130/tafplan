@@ -424,12 +424,15 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                     results.append(act)
 
             # ── Ignorer les blocs de médicaments ─────────────────────────────
-            if re.search(r'\d+\s*(mg|mL|UI|µg|mcg|ug)\b', block[:300], re.I):
+            # Exclure la note médecin du filtre (elle peut contenir "pdr", etc.)
+            block_sans_note = re.split(r'Note m[eé]decin\s*:', block, flags=re.IGNORECASE)[0]
+            check_zone = block_sans_note[:300]
+            if re.search(r'\d+\s*(mg|mL|UI|µg|mcg|ug)\b', check_zone, re.I):
                 continue
             if re.search(
                 r'\b(comprimé|gélule|sachet|ampoule|cpr|gél|pdr|'
                 r'cp\s?séc|cp\s?orodis|buvable|sirop|patch|goutte)\b',
-                block[:300], re.I
+                check_zone, re.I
             ):
                 continue
 
