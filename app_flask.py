@@ -233,6 +233,37 @@ def extract_medication_care_acts(block: str, patient: str, room: str,
     return results
 
 
+def extract_dietary_supplements(block: str, patient: str, room: str,
+                                heure_debut: time, heure_fin: time) -> list:
+    """Détecte les compléments alimentaires écrits directement comme noms de produits."""
+    results = []
+    lines = [l.strip() for l in block.split('\n') if l.strip()]
+
+    DIETARY_PRODUCTS = [
+        'FORTIMEL', 'CLINUTREN', 'CALCIDOSE', 'OPTIFIBRE', 'RENUTRYL',
+        'NUTRIDRINK', 'ENSURE', 'FRESUBIN', 'CUBITAN', 'DIASIP',
+        'PROTEINE', 'FORTIFRESH', 'FORTEOCARE'
+    ]
+
+    for line in lines:
+        line_upper = line.upper()
+        for product in DIETARY_PRODUCTS:
+            if product in line_upper:
+                times = _times_in_range(block, heure_debut, heure_fin)
+                description = f"Complément alimentaire ({product.title()})"
+                if 'DESSERT' in line_upper:
+                    description = f"Complément alimentaire ({product.title()} Dessert)"
+                elif 'PROTEIN' in line_upper or 'PROTEINE' in line_upper:
+                    description = f"Complément alimentaire ({product.title()} Protéiné)"
+                if times:
+                    for t in times:
+                        results.append({'resident': patient, 'room': room, 'heure': t, 'description': description, 'category': 'Compléments alimentaires'})
+                else:
+                    results.append({'resident': patient, 'room': room, 'heure': None, 'description': description, 'category': 'Compléments alimentaires'})
+                break
+    return results
+
+
 def format_patient_name(raw: str) -> str:
     raw = raw.strip()
     match = re.search(r'([A-Z\s\-]+)\s*\(?(?:née|né)\s+([A-Z\s\-]+)\)?\s+([A-Z\s\-]+)', raw)
@@ -272,6 +303,13 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
         for block in blocks[1:]:
             # Extraction collyres, injections SC, perfusions IV, traitements si besoin
             for act in extract_medication_care_acts(block, patient, room, heure_debut, heure_fin):
+                key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
+                if key not in seen:
+                    seen.add(key)
+                    results.append(act)
+
+            # Extraction compléments alimentaires
+            for act in extract_dietary_supplements(block, patient, room, heure_debut, heure_fin):
                 key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
                 if key not in seen:
                     seen.add(key)
