@@ -169,6 +169,7 @@ CARE_KEYWORDS_CONTAINS = [
     'STOMIE', 'ESCARRE', 'OXYGENE', 'CONSTANTES', 'DIURESE',
     'PESEE', 'EXAMEN', 'BIOLOGIE', 'HEMOCULTURE', 'UROCULTURE',
     'COMPLEMENT', 'ALIMENTAIRE', 'FORTIMEL', 'CLINUTREN', 'FORTEOCARE', 'DESSERT',
+    'BARRIERES', 'CONTENTION', 'CONTENTIONS', 'SANGLE',
 ]
 
 # Patterns à exclure (actes non souhaités)
@@ -531,6 +532,22 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                 else:
                     if act_lines:
                         break  # Fin du nom de l'acte
+
+            if not act_lines:
+                # Fallback : détecter une ligne contenant un acte de soin même si elle n'est pas entièrement en majuscules
+                for raw_line in block.split('\n'):
+                    line = raw_line.strip()
+                    if not line or line in ('c', 'g', 'h', 'j', ' ', '  '):
+                        continue
+                    if re.match(r'^\d{2}:\d{2}', line):
+                        continue
+                    if re.match(r'^\d+[\.,]\d+\s*Kg', line):
+                        continue
+                    if re.match(r'^\*\s*\d', line):
+                        continue
+                    if is_care_act(line):
+                        act_lines = [line.rstrip('.,;')]
+                        break
 
             if not act_lines:
                 continue
