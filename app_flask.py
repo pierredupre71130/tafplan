@@ -67,7 +67,7 @@ CATEGORY_RULES = [
     ("Psychologue", ["PSYCHOLOGUE", "BILAN PSYCHO"]),
     ("Évaluation", ["EVALUATION", "DOULEUR"]),
     ("Aide à la prise", ["AIDE A LA PRISE", "ACTE DE LA VIE COURANTE"]),
-    ("Pose / Ablation", ["POSE ", "ABLATION", "CHANGEMENT", "ATTELLE", "CHAUSSETTES DE CONTENTION", "SANGLE", "MATELAS"]),
+    ("Pose / Ablation", ["POSE ", "ABLATION", "CHANGEMENT", "ATTELLE", "CHAUSSETTES DE CONTENTION", "MATELAS"]),
     ("Soins locaux", ["PANSEMENT", "STOMIE", "ASPIRATION", "SONDAGE", "PROTECTION"]),
     ("Kinésithérapie", ["KINE", "KINÉ", "MOBILISATION", "MARCHE"]),
     ("Contentions", ["BANDES", "BAS", "CHAUSSETTES"]),
@@ -113,6 +113,126 @@ def categorize_care_act(description: str) -> str:
             return category
     return "Autres actes"
 
+def _times_in_range(block: str, heure_debut: time, heure_fin: time) -> list:
+    """Retourne les heures HH:MM du bloc qui tombent dans la tranche."""
+    result = []
+    for t_str in re.findall(r'(\d{2}:\d{2})', block):
+        try:
+            h, m = map(int, t_str.split(':'))
+            if heure_debut <= time(h, m) <= heure_fin:
+                result.append(t_str)
+        except ValueError:
+            pass
+    return result
+
+
+def extract_medication_care_acts(block: str, patient: str, room: str,
+                                  heure_debut: time, heure_fin: time) -> list:
+    """
+    Détecte dans un bloc de médicament les actes infirmiers implicites :
+    - Instillation collyre (voie ophtalmique)
+    - Injection SC insuline
+    - Perfusion IV
+    - Traitements si besoin
+    """
+    lower = block.lower()
+    results = []
+
+    # ── Collyre ──────────────────────────────────────────────────────────────
+    if 'collyre' in lower and ('ophtalmique' in lower or 'goutte' in lower):
+        times = _times_in_range(block, heure_debut, heure_fin)
+        brand = re.search(r'\(([A-Z][A-Z0-9\s\-]+)\)', block)
+        if brand:
+            drug_name = brand.group(1).strip().title()
+        else:
+            drug_name = 'collyre'
+            for line in block.split('\n'):
+                if 'collyre' in line.lower() and len(line.strip()) > 7:
+                    before = re.split(r'\bcollyre\b', line, flags=re.IGNORECASE)[0]
+                    before = before.strip().rstrip(' ,')
+                    before = re.sub(r'\s*\d[\d\s%/\.]*$', '', before).strip()
+                    if before:
+                        drug_name = before.title()
+                        break
+        note_match = re.search(r'Note médecin\s*:\s*(.{3,40})', block, re.IGNORECASE)
+        note = f" — {note_match.group(1).strip().lower()}" if note_match else ''
+        desc = f"Instillation collyre ({drug_name}){note}"
+        if times:
+            for t in times:
+                results.append({'resident': patient, 'room': room, 'heure': t, 'description': desc, 'category': 'Collyre'})
+        else:
+            results.append({'resident': patient, 'room': room, 'heure': None, 'description': desc, 'category': 'Collyre'})
+
+    # ── Injection SC insuline ─────────────────────────────────────────────────
+    if ('voie sc' in lower or ', voie sc' in lower or 'sc,' in lower
+            or 'sous-cut' in lower or 'sous cutan' in lower) and 'insuline' in lower:
+        times = _times_in_range(block, heure_debut, heure_fin)
+        is_lente = 'lente' in lower or 'glargine' in lower or 'toujeo' in lower \
+                   or 'abasaglar' in lower or 'lantus' in lower or 'tresiba' in lower
+        is_rapide = 'rapide' in lower or 'asparte' in lower or 'novorapid' in lower \
+                    or 'humalog' in lower or 'apidra' in lower
+        si_besoin = 'si besoin' in lower or 'selon prot' in lower
+        if is_lente:
+            ins_type = 'Injection insuline lente SC'
+        elif is_rapide:
+            ins_type = 'Injection insuline rapide SC'
+        else:
+            ins_type = 'Injection insuline SC'
+        if si_besoin:
+            ins_type += ' (si besoin)'
+        dose_match = re.search(r'(\d+)\s*unité', lower)
+        dose = f" {dose_match.group(1)} UI" if dose_match else ''
+        desc = f"{ins_type}{dose}"
+        if times:
+            for t in times:
+                results.append({'resident': patient, 'room': room, 'heure': t, 'description': desc, 'category': 'Injection / SC'})
+        elif si_besoin or not times:
+            results.append({'resident': patient, 'room': room, 'heure': None, 'description': desc, 'category': 'Injection / SC'})
+
+    # ── Perfusion IV ──────────────────────────────────────────────────────────
+    if 'perfusion' in lower or 'voie iv' in lower or 'intraveineux' in lower \
+            or 'voie veineuse' in lower:
+        times = _times_in_range(block, heure_debut, heure_fin)
+        lines = [l.strip() for l in block.split('\n') if l.strip()]
+        drug_line = next(
+            (l for l in lines if len(l) > 5 and not re.match(r'^\d', l)
+             and l not in ('c', 'g', 'h', 'j')
+             and not re.search(r'\b(gélule|comprimé|cp|capsule|sachet|ampoule|gel|sirop|pdr|cp séc|cp orodis)\b', l, re.I)), 'Perfusion IV'
+        )
+        desc = f"Perfusion IV — {drug_line[:40].rstrip('.,')}"
+        if times:
+            for t in times:
+                results.append({'resident': patient, 'room': room, 'heure': t, 'description': desc, 'category': 'Perfusion / IV'})
+        else:
+            results.append({'resident': patient, 'room': room, 'heure': None, 'description': desc, 'category': 'Perfusion / IV'})
+
+    # ── Traitements si besoin ─────────────────────────────────────────────────
+    if 'si besoin' in lower and not any(kw in lower for kw in ['collyre', 'insuline', 'perfusion', 'voie iv', 'intraveineux', 'voie veineuse']):
+        times = _times_in_range(block, heure_debut, heure_fin)
+        lines = [l.strip() for l in block.split('\n') if l.strip()]
+        drug_line = next(
+            (l for l in lines if len(l) > 5 and not re.match(r'^\d', l)
+             and l not in ('c', 'g', 'h', 'j') and 'si besoin' not in l.lower()), None
+        )
+        if drug_line:
+            match = re.search(r'^(.+?)\s*\d+', drug_line.strip())
+            drug_name = match.group(1).strip() if match else drug_line.strip()
+            drug_name = drug_name.title()
+            brand_match = re.search(r'\(([A-Z][A-Z0-9\s\-]+)\)', drug_name)
+            if brand_match:
+                drug_name = brand_match.group(1).strip().title()
+        else:
+            drug_name = 'Médicament'
+        desc = f"Traitement si besoin — {drug_name}"
+        if times:
+            for t in times:
+                results.append({'resident': patient, 'room': room, 'heure': t, 'description': desc, 'category': 'Traitements si besoin'})
+        else:
+            results.append({'resident': patient, 'room': room, 'heure': None, 'description': desc, 'category': 'Traitements si besoin'})
+
+    return results
+
+
 def format_patient_name(raw: str) -> str:
     raw = raw.strip()
     match = re.search(r'([A-Z\s\-]+)\s*\(?(?:née|né)\s+([A-Z\s\-]+)\)?\s+([A-Z\s\-]+)', raw)
@@ -150,6 +270,13 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
         blocks = re.split(r'Début le \d{2}/\d{2}/\d{2,4} à \d{2}:\d{2}', text)
 
         for block in blocks[1:]:
+            # Extraction collyres, injections SC, perfusions IV, traitements si besoin
+            for act in extract_medication_care_acts(block, patient, room, heure_debut, heure_fin):
+                key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
+                if key not in seen:
+                    seen.add(key)
+                    results.append(act)
+
             # Extraction spéciale pour les barrières
             for line in block.split('\n'):
                 line_norm = _normalize(line.strip())
