@@ -78,6 +78,12 @@ CATEGORY_RULES = [
     ("Enseignement", ["ENSEIGNANT APA", "ENSEIGNANT"]),
     ("Compléments alimentaires", ["COMPLEMENT", "FORTIMEL", "OPTIFIBRE", "PROTEINE", "NUTRITION", "DIETETIQUE"]),
     ("Traitements si besoin", ["TRAITEMENT SI BESOIN"]),
+    ("Antalgiques", ["PARACETAMOL", "DOLIPRANE", "CODEINE", "TRAMADOL", "MORPHINE", "IBUPROFENE"]),
+    ("Psychotropes", ["RISPERIDONE", "HALOPERIDOL", "LORAZEPAM", "DIAZEPAM", "SERTRALINE", "PSYCHOTROPE"]),
+    ("Traitements cardiaques", ["AMLODIPINE", "BISOPROLOL", "RAMIPRIL", "VALSARTAN", "DIGOXINE", "AMIODARONE"]),
+    ("Traitements diabétiques", ["METFORMINE", "GLICLAZIDE", "GLIPIZIDE", "SITAGLIPTINE", "ANTIDIABETIQUE"]),
+    ("Traitements anticoagulants", ["WARFARINE", "RIVAROXABAN", "APIXABAN", "HEPARINE", "ANTICOAGULANT"]),
+    ("Traitements diurétiques", ["FUROSEMIDE", "SPIRONOLACTONE", "INDAPAMIDE", "DIURETIQUE"]),
 ]
 
 MEDICATION_CATEGORY_RULES = [
