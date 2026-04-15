@@ -436,7 +436,8 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                 any(prod in check_zone.upper() for prod in [
                     'FORTIMEL', 'CALCIDOSE', 'OPTIFIBRE', 'CLINUTREN',
                     'RENUTRYL', 'NUTRIDRINK', 'ENSURE', 'FRESUBIN',
-                    'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH', 'SUPPLEMENT'
+                    'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH', 'SUPPLEMENT',
+                    'FORTEOCARE', 'DESSERT'
                 ])
             )
             
@@ -483,7 +484,21 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
             # Pour les compléments alimentaires, enrichir avec le nom du produit
             description = title_fr(act_name)
             act_upper = act_name.upper()
-            if 'COMPLEMENT' in act_upper:
+            
+            # Vérifier si c'est un complément alimentaire
+            is_complement = 'COMPLEMENT' in act_upper
+            if not is_complement:
+                # Vérifier si le nom de l'acte contient un produit connu
+                PRODUITS = ['FORTIMEL', 'CALCIDOSE', 'OPTIFIBRE', 'CLINUTREN',
+                            'RENUTRYL', 'NUTRIDRINK', 'ENSURE', 'FRESUBIN',
+                            'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH',
+                            'SUPPLEMENT', 'ALIMENTAIRE', 'FORTEOCARE', 'DESSERT']
+                for prod in PRODUITS:
+                    if prod in act_upper:
+                        is_complement = True
+                        break
+            
+            if is_complement:
                 # Chercher note médecin (ex: "clinutren", "fortimel")
                 note_m = re.search(r'Note m[eé]decin\s*:\s*(.{2,50})', block, re.IGNORECASE)
                 if note_m:
@@ -491,10 +506,6 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                     description = f"Complément alimentaire ({produit})"
                 else:
                     # Chercher un nom de produit connu dans le bloc
-                    PRODUITS = ['FORTIMEL', 'CALCIDOSE', 'OPTIFIBRE', 'CLINUTREN',
-                                'RENUTRYL', 'NUTRIDRINK', 'ENSURE', 'FRESUBIN',
-                                'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH',
-                                'SUPPLEMENT', 'ALIMENTAIRE']
                     for prod in PRODUITS:
                         if prod in block.upper():
                             description = f"Complément alimentaire ({prod.title()})"
@@ -694,7 +705,7 @@ CATEGORY_RULES = [
     ("Enseignement", ["ENSEIGNANT APA", "ENSEIGNANT"]),
     ("Compléments alimentaires", ["COMPLEMENT", "ALIMENTAIRE", "FORTIMEL", "CALCIDOSE", "OPTIFIBRE", "CLINUTREN",
                                   "RENUTRYL", "NUTRIDRINK", "ENSURE", "FRESUBIN", "CUBITAN", "DIASIP", 
-                                  "PROTEINE", "FORTIFRESH", "NUTRITION", "DIETETIQUE", "SUPPLEMENT"]),
+                                  "PROTEINE", "FORTIFRESH", "NUTRITION", "DIETETIQUE", "SUPPLEMENT", "FORTEOCARE", "DESSERT"]),
     ("Traitements si besoin", ["TRAITEMENT SI BESOIN"]),
 ]
 
