@@ -168,6 +168,7 @@ CARE_KEYWORDS_CONTAINS = [
     'GLYCEMIE', 'DEXTRO', 'PANSEMENT', 'TENSION',
     'STOMIE', 'ESCARRE', 'OXYGENE', 'CONSTANTES', 'DIURESE',
     'PESEE', 'EXAMEN', 'BIOLOGIE', 'HEMOCULTURE', 'UROCULTURE',
+    'COMPLEMENT', 'ALIMENTAIRE',
 ]
 
 # Patterns à exclure (actes non souhaités)
@@ -428,14 +429,26 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
             # Exclure la note médecin du filtre (elle peut contenir "pdr", etc.)
             block_sans_note = re.split(r'Note m[eé]decin\s*:', block, flags=re.IGNORECASE)[0]
             check_zone = block_sans_note[:300]
-            if re.search(r'\d+\s*(mg|mL|UI|µg|mcg|ug)\b', check_zone, re.I):
-                continue
-            if re.search(
-                r'\b(comprimé|gélule|sachet|ampoule|cpr|gél|pdr|'
-                r'cp\s?séc|cp\s?orodis|buvable|sirop|patch|goutte)\b',
-                check_zone, re.I
-            ):
-                continue
+            
+            # Vérifier si c'est un complément alimentaire (ne pas filtrer comme médicament)
+            is_dietary_supplement = (
+                'COMPLEMENT' in check_zone.upper() or 'ALIMENTAIRE' in check_zone.upper() or
+                any(prod in check_zone.upper() for prod in [
+                    'FORTIMEL', 'CALCIDOSE', 'OPTIFIBRE', 'CLINUTREN',
+                    'RENUTRYL', 'NUTRIDRINK', 'ENSURE', 'FRESUBIN',
+                    'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH', 'SUPPLEMENT'
+                ])
+            )
+            
+            if not is_dietary_supplement:
+                if re.search(r'\d+\s*(mg|mL|UI|µg|mcg|ug)\b', check_zone, re.I):
+                    continue
+                if re.search(
+                    r'\b(comprimé|gélule|sachet|ampoule|cpr|gél|pdr|'
+                    r'cp\s?séc|cp\s?orodis|buvable|sirop|patch|goutte)\b',
+                    check_zone, re.I
+                ):
+                    continue
 
             # Extraire toutes les heures présentes dans ce bloc
             times_in_block = re.findall(r'(\d{2}:\d{2})', block)
@@ -480,7 +493,8 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                     # Chercher un nom de produit connu dans le bloc
                     PRODUITS = ['FORTIMEL', 'CALCIDOSE', 'OPTIFIBRE', 'CLINUTREN',
                                 'RENUTRYL', 'NUTRIDRINK', 'ENSURE', 'FRESUBIN',
-                                'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH']
+                                'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH',
+                                'SUPPLEMENT', 'ALIMENTAIRE']
                     for prod in PRODUITS:
                         if prod in block.upper():
                             description = f"Complément alimentaire ({prod.title()})"
@@ -678,7 +692,9 @@ CATEGORY_RULES = [
     ("Lever", ["LEVER", "FAUTEUIL"]),
     ("Hydratation", ["HYDRATATION", "BOISSON", "STIMULATION"]),
     ("Enseignement", ["ENSEIGNANT APA", "ENSEIGNANT"]),
-    ("Compléments alimentaires", ["COMPLEMENT", "FORTIMEL", "CALCIDOSE", "OPTIFIBRE", "PROTEINE", "NUTRITION", "DIETETIQUE"]),
+    ("Compléments alimentaires", ["COMPLEMENT", "ALIMENTAIRE", "FORTIMEL", "CALCIDOSE", "OPTIFIBRE", "CLINUTREN",
+                                  "RENUTRYL", "NUTRIDRINK", "ENSURE", "FRESUBIN", "CUBITAN", "DIASIP", 
+                                  "PROTEINE", "FORTIFRESH", "NUTRITION", "DIETETIQUE", "SUPPLEMENT"]),
     ("Traitements si besoin", ["TRAITEMENT SI BESOIN"]),
 ]
 
