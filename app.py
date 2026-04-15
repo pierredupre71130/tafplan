@@ -562,13 +562,14 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
             # Pour les compléments alimentaires, enrichir avec le nom du produit
             description = title_fr(act_name)
             act_upper = act_name.upper()
+            act_norm = _normalize(act_upper)
 
             # Normalisation de variantes de contentions physiques
-            if 'BARRIERES MISES EN PLACE' in act_upper or 'BARRIERES AU LIT' in act_upper or 'BARRIERE AU LIT' in act_upper:
+            if 'BARRIERES MISES EN PLACE' in act_norm or 'BARRIERES AU LIT' in act_norm or 'BARRIERE AU LIT' in act_norm:
                 description = 'Barrières au lit'
-            elif 'CONTENTIONS FAUTEUIL' in act_upper or 'CONTENTIONS FAUTEUIL' in act_upper:
+            elif 'CONTENTIONS FAUTEUIL' in act_norm:
                 description = 'Contentions fauteuil'
-            elif 'SANGLE VENTRALE' in act_upper:
+            elif 'SANGLE VENTRALE' in act_norm:
                 description = 'Sangle ventrale'
 
             # Vérifier si c'est un complément alimentaire
