@@ -14,8 +14,8 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 st.set_page_config(
     page_title="TAFPLAN - Planning des soins",
     page_icon="🏥",
-    layout="wide",
-    initial_sidebar_state="expanded",
+    layout="centered",
+    initial_sidebar_state="auto",
 )
 
 # ---------------------------------------------------------------------------
@@ -104,6 +104,42 @@ def inject_css():
             padding: 2px 10px;
             border-radius: 12px;
             margin-left: 8px;
+        }
+        /* Cards mobile */
+        .care-card {
+            background: white;
+            border-left: 4px solid #FF6B00;
+            padding: 14px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        .care-card-heure {
+            font-weight: 700;
+            color: #FF6B00;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+        .care-card-resident {
+            font-weight: 600;
+            color: #1A1A1A;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+        .care-card-description {
+            color: #444;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        /* Compact max-width */
+        .main .block-container {
+            max-width: 680px !important;
+            padding: 1rem !important;
+        }
+        @media (max-width: 640px) {
+            .main .block-container { padding: 0.5rem !important; }
+            .care-card { padding: 12px; margin-bottom: 8px; }
         }
         </style>
         """,
@@ -673,37 +709,24 @@ def render_soins_table(soins: list):
         )
         return
 
-    rows = ""
+    cards_html = ""
     for s in soins:
         heure_display = format_heure(s.get('heure'))
         resident = s.get('resident') or 'Résident non identifié'
-        room = s.get('room') or 'Inconnue'
-        category = s.get('category') or 'Non renseignée'
+        room = s.get('room') or ''
+        category = s.get('category') or ''
         description = s.get('description') or ''
-        rows += f"""
-        <tr>
-            <td class="heure-cell">{heure_display}</td>
-            <td>{room}</td>
-            <td class="resident-cell">{resident}</td>
-            <td>{category}</td>
-            <td>{description}</td>
-        </tr>"""
+        room_str = f"🚪 Ch. {room} &nbsp;|&nbsp; " if room else ''
+        cat_str = f"<span style='color:#FF6B00;font-size:0.78rem;font-weight:600'>{category}</span>" if category else ''
+        cards_html += f"""
+        <div class="care-card">
+            <div class="care-card-heure">🕐 {heure_display}</div>
+            <div class="care-card-resident">{room_str}👤 {resident}</div>
+            <div style="margin-bottom:4px">{cat_str}</div>
+            <div class="care-card-description">{description}</div>
+        </div>"""
 
-    table_html = f"""
-    <table class="care-table">
-        <thead>
-            <tr>
-                <th>Heure</th>
-                <th>Chambre</th>
-                <th>Résident(e)</th>
-                <th>Catégorie</th>
-                <th>Acte de soin</th>
-            </tr>
-        </thead>
-        <tbody>{rows}</tbody>
-    </table>
-    """
-    st.markdown(table_html, unsafe_allow_html=True)
+    st.markdown(cards_html, unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
