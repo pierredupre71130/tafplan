@@ -308,13 +308,6 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                     seen.add(key)
                     results.append(act)
 
-            # Extraction compléments alimentaires
-            for act in extract_dietary_supplements(block, patient, room, heure_debut, heure_fin):
-                key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
-                if key not in seen:
-                    seen.add(key)
-                    results.append(act)
-
             # Extraction spéciale pour les barrières
             for line in block.split('\n'):
                 line_norm = _normalize(line.strip())
