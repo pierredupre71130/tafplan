@@ -76,7 +76,7 @@ CATEGORY_RULES = [
     ("Lever", ["LEVER", "FAUTEUIL"]),
     ("Hydratation", ["HYDRATATION", "BOISSON", "STIMULATION"]),
     ("Enseignement", ["ENSEIGNANT APA", "ENSEIGNANT"]),
-    ("Compléments alimentaires", ["COMPLEMENT", "FORTIMEL", "CALCIDOSE", "OPTIFIBRE", "PROTEINE", "NUTRITION", "DIETETIQUE"]),
+    ("Compléments alimentaires", ["COMPLEMENT", "FORTIMEL", "OPTIFIBRE", "PROTEINE", "NUTRITION", "DIETETIQUE"]),
     ("Traitements si besoin", ["TRAITEMENT SI BESOIN"]),
 ]
 
@@ -240,7 +240,7 @@ def extract_dietary_supplements(block: str, patient: str, room: str,
     lines = [l.strip() for l in block.split('\n') if l.strip()]
 
     DIETARY_PRODUCTS = [
-        'FORTIMEL', 'CLINUTREN', 'CALCIDOSE', 'OPTIFIBRE', 'RENUTRYL',
+        'FORTIMEL', 'CLINUTREN', 'OPTIFIBRE', 'RENUTRYL',
         'NUTRIDRINK', 'ENSURE', 'FRESUBIN', 'CUBITAN', 'DIASIP',
         'PROTEINE', 'FORTIFRESH', 'FORTEOCARE'
     ]
@@ -343,7 +343,7 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
             is_dietary = (
                 'COMPLEMENT' in check_zone.upper() or 'ALIMENTAIRE' in check_zone.upper() or
                 any(prod in check_zone.upper() for prod in [
-                    'FORTIMEL', 'CALCIDOSE', 'OPTIFIBRE', 'CLINUTREN',
+                    'FORTIMEL', 'OPTIFIBRE', 'CLINUTREN',
                     'RENUTRYL', 'NUTRIDRINK', 'ENSURE', 'FRESUBIN',
                     'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH', 'SUPPLEMENT',
                     'FORTEOCARE', 'DESSERT'
@@ -418,7 +418,7 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
             # Détection de compléments alimentaires dans le nom de l'acte
             is_complement = 'COMPLEMENT' in act_upper
             if not is_complement:
-                PRODUITS = ['FORTIMEL', 'CALCIDOSE', 'OPTIFIBRE', 'CLINUTREN',
+                PRODUITS = ['FORTIMEL', 'OPTIFIBRE', 'CLINUTREN',
                             'RENUTRYL', 'NUTRIDRINK', 'ENSURE', 'FRESUBIN',
                             'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH',
                             'SUPPLEMENT', 'ALIMENTAIRE', 'FORTEOCARE', 'DESSERT']

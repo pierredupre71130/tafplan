@@ -385,7 +385,10 @@
                 patientMap[key].soins.push(s);
             });
 
-            const patients = patientOrder.map(k => ({ resident: k, room: patientMap[k].room, soins: patientMap[k].soins }));
+            const getLastName = name => name.replace(/^(Mme\/M\.|Mme|M\.)\s*/i, '').trim().split(' ').pop().toLowerCase();
+            const patients = patientOrder
+                .map(k => ({ resident: k, room: patientMap[k].room, soins: patientMap[k].soins }))
+                .sort((a, b) => getLastName(a.resident).localeCompare(getLastName(b.resident), 'fr'));
             displayResults(filtered.length, patients);
 
             // Mettre à jour les données pour l'export
