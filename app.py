@@ -737,21 +737,40 @@ def render_soins_table(soins: list):
         )
         return
 
-    cards_html = ""
+    # Regrouper les soins par patient (en gardant l'ordre du premier soin)
+    from collections import OrderedDict
+    patients = OrderedDict()
     for s in soins:
-        heure_display = format_heure(s.get('heure'))
-        resident = s.get('resident') or 'Résident non identifié'
-        room = s.get('room') or ''
-        category = s.get('category') or ''
-        description = s.get('description') or ''
+        key = s.get('resident') or 'Résident non identifié'
+        if key not in patients:
+            patients[key] = {
+                'room': s.get('room') or '',
+                'soins': []
+            }
+        patients[key]['soins'].append(s)
+
+    cards_html = ""
+    for resident, data in patients.items():
+        room = data['room']
         room_str = f"🚪 Ch. {room} &nbsp;|&nbsp; " if room else ''
-        cat_str = f"<span style='color:#FF6B00;font-size:0.78rem;font-weight:600'>{category}</span>" if category else ''
+
+        # Lignes de soins
+        lignes = ""
+        for s in data['soins']:
+            heure_display = format_heure(s.get('heure'))
+            description = s.get('description') or ''
+            category = s.get('category') or ''
+            cat_str = f"<span style='background:#FFF3E0;color:#FF6B00;font-size:0.72rem;font-weight:600;padding:1px 6px;border-radius:8px;margin-right:5px'>{category}</span>" if category else ''
+            lignes += f"""
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #FFF3E0;">
+                <span style="font-weight:700;color:#FF6B00;white-space:nowrap;min-width:48px">🕐 {heure_display}</span>
+                <span>{cat_str}{description}</span>
+            </div>"""
+
         cards_html += f"""
         <div class="care-card">
-            <div class="care-card-heure">🕐 {heure_display}</div>
-            <div class="care-card-resident">{room_str}👤 {resident}</div>
-            <div style="margin-bottom:4px">{cat_str}</div>
-            <div class="care-card-description">{description}</div>
+            <div class="care-card-resident" style="margin-bottom:8px">{room_str}👤 <strong>{resident}</strong></div>
+            {lignes}
         </div>"""
 
     st.markdown(cards_html, unsafe_allow_html=True)
