@@ -168,7 +168,7 @@ CARE_KEYWORDS_CONTAINS = [
     'GLYCEMIE', 'DEXTRO', 'PANSEMENT', 'TENSION',
     'STOMIE', 'ESCARRE', 'OXYGENE', 'CONSTANTES', 'DIURESE',
     'PESEE', 'EXAMEN', 'BIOLOGIE', 'HEMOCULTURE', 'UROCULTURE',
-    'COMPLEMENT', 'ALIMENTAIRE', 'FORTIMEL', 'CLINUTREN', 'FORTEOCARE',
+    'COMPLEMENT', 'ALIMENTAIRE', 'FORTIMEL', 'CLINUTREN', 'FORTEOCARE', 'DESSERT',
 ]
 
 # Patterns à exclure (actes non souhaités)
@@ -386,6 +386,60 @@ def extract_medication_care_acts(block: str, patient: str, room: str,
     return results
 
 
+def extract_dietary_supplements(block: str, patient: str, room: str,
+                                heure_debut: time, heure_fin: time) -> list:
+    """
+    Détecte les compléments alimentaires écrits directement comme noms de produits.
+    """
+    results = []
+    lines = [l.strip() for l in block.split('\n') if l.strip()]
+    
+    # Produits de complément alimentaire connus
+    DIETARY_PRODUCTS = [
+        'FORTIMEL', 'CLINUTREN', 'CALCIDOSE', 'OPTIFIBRE', 'RENUTRYL',
+        'NUTRIDRINK', 'ENSURE', 'FRESUBIN', 'CUBITAN', 'DIASIP',
+        'PROTEINE', 'FORTIFRESH', 'FORTEOCARE'
+    ]
+    
+    for line in lines:
+        line_upper = line.upper()
+        
+        # Vérifier si la ligne contient un produit de complément
+        for product in DIETARY_PRODUCTS:
+            if product in line_upper:
+                # Extraire les heures dans la ligne ou le bloc
+                times = _times_in_range(block, heure_debut, heure_fin)
+                
+                # Créer la description
+                description = f"Complément alimentaire ({product.title()})"
+                
+                # Si on trouve des détails spécifiques, les ajouter
+                if 'DESSERT' in line_upper:
+                    description = f"Complément alimentaire ({product.title()} Dessert)"
+                elif 'PROTEIN' in line_upper or 'PROTEINE' in line_upper:
+                    description = f"Complément alimentaire ({product.title()} Protéiné)"
+                
+                if times:
+                    for t in times:
+                        results.append({
+                            'resident': patient,
+                            'room': room,
+                            'heure': t,
+                            'description': description
+                        })
+                else:
+                    # Si pas d'heure spécifique, ajouter quand même
+                    results.append({
+                        'resident': patient,
+                        'room': room,
+                        'heure': None,
+                        'description': description
+                    })
+                break  # Un produit par ligne
+    
+    return results
+
+
 # ---------------------------------------------------------------------------
 # Extraction PDF — toutes les pages, sans LLM
 # ---------------------------------------------------------------------------
@@ -419,6 +473,13 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
             # ── Extraction spéciale AVANT le filtre médicament ───────────────
             # Collyres et injections SC : écrits comme médicaments mais = actes
             for act in extract_medication_care_acts(block, patient, room, heure_debut, heure_fin):
+                key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
+                if key not in seen:
+                    seen.add(key)
+                    results.append(act)
+
+            # ── Extraction spéciale pour les compléments alimentaires ───────
+            for act in extract_dietary_supplements(block, patient, room, heure_debut, heure_fin):
                 key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
                 if key not in seen:
                     seen.add(key)
