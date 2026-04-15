@@ -1224,178 +1224,178 @@ def main():
         # ── Zone de saisie ────────────────────────────────────────────────────────
         col_upload, col_heures = st.columns([3, 2], gap="large")
 
-    with col_upload:
-        uploaded_file = st.file_uploader(
-            "Importer le planning PDF",
-            type=["pdf"],
-            accept_multiple_files=False,
-            help="PDF multi-pages (logiciel EHPAD). Toutes les pages sont analysées.",
+        with col_upload:
+            uploaded_file = st.file_uploader(
+                "Importer le planning PDF",
+                type=["pdf"],
+                accept_multiple_files=False,
+                help="PDF multi-pages (logiciel EHPAD). Toutes les pages sont analysées.",
+            )
+
+        with col_heures:
+            st.markdown("**Tranche horaire à analyser**")
+            sub_col1, sub_col2 = st.columns(2)
+            with sub_col1:
+                heure_debut = st.time_input("Début de la tranche", value=time(14, 0), step=1800)
+            with sub_col2:
+                heure_fin = st.time_input("Fin de la tranche", value=time(20, 0), step=1800)
+
+            if heure_debut >= heure_fin:
+                st.warning("L'heure de fin doit être postérieure à l'heure de début.")
+
+        st.divider()
+
+        bouton_disabled = uploaded_file is None or heure_debut >= heure_fin
+        analyze_clicked = st.button(
+            "🔍  Analyser les soins",
+            type="primary",
+            use_container_width=True,
+            disabled=bouton_disabled,
         )
 
-    with col_heures:
-        st.markdown("**Tranche horaire à analyser**")
-        sub_col1, sub_col2 = st.columns(2)
-        with sub_col1:
-            heure_debut = st.time_input("Début de la tranche", value=time(14, 0), step=1800)
-        with sub_col2:
-            heure_fin = st.time_input("Fin de la tranche", value=time(20, 0), step=1800)
+        if "soins_results" not in st.session_state:
+            st.session_state["soins_results"] = None
+        if "last_params" not in st.session_state:
+            st.session_state["last_params"] = {}
 
-        if heure_debut >= heure_fin:
-            st.warning("L'heure de fin doit être postérieure à l'heure de début.")
+        # ── Traitement ────────────────────────────────────────────────────────────
+        if analyze_clicked:
+            debut_str = heure_debut.strftime("%H:%M")
+            fin_str = heure_fin.strftime("%H:%M")
 
-    st.divider()
+            pdf_bytes = uploaded_file.read()
+            nb_pages = fitz.open(stream=pdf_bytes, filetype="pdf").page_count
 
-    bouton_disabled = uploaded_file is None or heure_debut >= heure_fin
-    analyze_clicked = st.button(
-        "🔍  Analyser les soins",
-        type="primary",
-        use_container_width=True,
-        disabled=bouton_disabled,
-    )
-
-    if "soins_results" not in st.session_state:
-        st.session_state["soins_results"] = None
-    if "last_params" not in st.session_state:
-        st.session_state["last_params"] = {}
-
-    # ── Traitement ────────────────────────────────────────────────────────────
-    if analyze_clicked:
-        debut_str = heure_debut.strftime("%H:%M")
-        fin_str = heure_fin.strftime("%H:%M")
-
-        pdf_bytes = uploaded_file.read()
-        nb_pages = fitz.open(stream=pdf_bytes, filetype="pdf").page_count
-
-        with st.spinner(
-            f"Analyse des {nb_pages} pages du PDF — extraction des actes infirmiers…"
-        ):
-            candidates = extract_care_acts(pdf_bytes, heure_debut, heure_fin)
-
-        if not candidates:
-            st.warning(
-                "Aucun acte de soin infirmier trouvé dans la tranche "
-                f"{debut_str}–{fin_str}. "
-                "Essayez une autre tranche horaire."
-            )
-            st.stop()
-
-        # Normalisation LLM (optionnelle)
-        client = get_groq_client()
-        if client:
             with st.spinner(
-                f"Normalisation des {len(candidates)} soins par l'IA Groq…"
+                f"Analyse des {nb_pages} pages du PDF — extraction des actes infirmiers…"
             ):
-                soins = normalize_with_groq(client, candidates)
-        else:
-            soins = candidates  # Extraction Python directe, libellés déjà formatés
+                candidates = extract_care_acts(pdf_bytes, heure_debut, heure_fin)
 
-        soins = assign_care_categories(soins)
-        soins = sort_soins(soins)
-        categories = sorted({s.get("category", "Autres actes") for s in soins})
+            if not candidates:
+                st.warning(
+                    "Aucun acte de soin infirmier trouvé dans la tranche "
+                    f"{debut_str}–{fin_str}. "
+                    "Essayez une autre tranche horaire."
+                )
+                st.stop()
 
-        st.session_state["soins_results"] = soins
-        st.session_state["category_filter"] = categories
-        st.session_state["search_query"] = ""
-        st.session_state["last_params"] = {
-            "debut": debut_str,
-            "fin": fin_str,
-            "filename": uploaded_file.name,
-            "nb_pages": nb_pages,
-            "used_llm": client is not None,
-        }
+            # Normalisation LLM (optionnelle)
+            client = get_groq_client()
+            if client:
+                with st.spinner(
+                    f"Normalisation des {len(candidates)} soins par l'IA Groq…"
+                ):
+                    soins = normalize_with_groq(client, candidates)
+            else:
+                soins = candidates  # Extraction Python directe, libellés déjà formatés
 
-    # ── Affichage des résultats ───────────────────────────────────────────────
-    if st.session_state["soins_results"] is not None:
-        soins = st.session_state["soins_results"]
-        params = st.session_state["last_params"]
-        categories = sorted({s.get("category", "Autres actes") for s in soins})
+            soins = assign_care_categories(soins)
+            soins = sort_soins(soins)
+            categories = sorted({s.get("category", "Autres actes") for s in soins})
 
-        if "category_filter" not in st.session_state or not st.session_state["category_filter"]:
+            st.session_state["soins_results"] = soins
             st.session_state["category_filter"] = categories
+            st.session_state["search_query"] = ""
+            st.session_state["last_params"] = {
+                "debut": debut_str,
+                "fin": fin_str,
+                "filename": uploaded_file.name,
+                "nb_pages": nb_pages,
+                "used_llm": client is not None,
+            }
 
-        mode = "IA Groq" if params.get("used_llm") else "Extraction Python"
+        # ── Affichage des résultats ───────────────────────────────────────────────
+        if st.session_state["soins_results"] is not None:
+            soins = st.session_state["soins_results"]
+            params = st.session_state["last_params"]
+            categories = sorted({s.get("category", "Autres actes") for s in soins})
+
+            if "category_filter" not in st.session_state or not st.session_state["category_filter"]:
+                st.session_state["category_filter"] = categories
+
+            mode = "IA Groq" if params.get("used_llm") else "Extraction Python"
+            st.markdown(
+                f"### Planning des soins — {params.get('debut', '')} à {params.get('fin', '')}"
+                f"&nbsp;<span class='badge-count'>{len(soins)} soin(s)</span>",
+                unsafe_allow_html=True,
+            )
+            st.caption(
+                f"Source : {params.get('filename', '')}  |  "
+                f"{params.get('nb_pages', '?')} pages analysées  |  Mode : {mode}"
+            )
+
+            with st.expander("🔎 Recherche et filtres", expanded=True):
+                search_query = st.text_input(
+                    "Recherche mots-clés",
+                    value=st.session_state.get("search_query", ""),
+                    key="search_query",
+                    placeholder="Ex. douleur, perfusion, Mme Dupont",
+                    help="Filtrer les soins par résident, acte ou catégorie.",
+                )
+                st.markdown("**Catégories à afficher**")
+                if st.button("Restaurer le filtre de base"):
+                    st.session_state["category_filter"] = categories
+                # Système de checkboxes pour les catégories
+                selected_categories = []
+                cols = st.columns(3)  # 3 colonnes pour organiser les checkboxes
+                for i, cat in enumerate(categories):
+                    col = cols[i % 3]
+                    default_checked = cat in st.session_state.get("category_filter", categories)
+                    if col.checkbox(cat, value=default_checked, key=f"cat_{cat}"):
+                        selected_categories.append(cat)
+                st.session_state["category_filter"] = selected_categories  # Mettre à jour l'état de session
+                st.caption(
+                    "Cochez/décochez les catégories à afficher. Le bouton 'Restaurer le filtre de base' "
+                    "sélectionne toutes les catégories."
+                )
+                floor_filter = st.selectbox(
+                    "Filtrer par étage",
+                    options=["Tous", "RDC (1-99)", "1er étage (100+)"],
+                    index=0,
+                    help="Filtrer les résultats par étage. Les chambres 1-99 sont au RDC, 100+ au 1er étage."
+                )
+
+            filtered_soins = filter_soins(soins, selected_categories, st.session_state.get("search_query", ""), floor_filter)
+            st.markdown(f"**Résultats filtrés : {len(filtered_soins)} / {len(soins)} soin(s)**")
+            render_soins_table(filtered_soins)
+
+            if filtered_soins:
+                st.divider()
+                date_str = datetime.now().strftime("%d/%m/%Y à %Hh%M")
+                with st.spinner("Génération du PDF…"):
+                    pdf_bytes_export = generate_pdf(
+                        filtered_soins,
+                        params.get("debut", ""),
+                        params.get("fin", ""),
+                        date_str,
+                    )
+                nom_fichier = (
+                    f"planning_soins_"
+                    f"{params.get('debut', '').replace(':', 'h')}_"
+                    f"{params.get('fin', '').replace(':', 'h')}.pdf"
+                )
+                st.download_button(
+                    label="⬇️  Télécharger le planning (PDF)",
+                    data=pdf_bytes_export,
+                    file_name=nom_fichier,
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
+
+        # ── Disclaimer RGPD ───────────────────────────────────────────────────────
         st.markdown(
-            f"### Planning des soins — {params.get('debut', '')} à {params.get('fin', '')}"
-            f"&nbsp;<span class='badge-count'>{len(soins)} soin(s)</span>",
+            """
+            <div class="rgpd-box">
+            <strong>Notice de confidentialité (RGPD)</strong> — Ce service traite des données de santé
+            à caractère personnel (catégorie spéciale, Art. 9 du RGPD). Aucune donnée n'est stockée
+            par cette application entre les sessions. Si une clé API Groq est utilisée, les descriptions
+            des soins (sans données personnelles) sont transmises à l'API Groq pour normalisation.
+            L'utilisation est réservée au personnel soignant habilité. En cas de question, rapprochez-vous
+            du DPO de votre établissement.
+            </div>
+            """,
             unsafe_allow_html=True,
         )
-        st.caption(
-            f"Source : {params.get('filename', '')}  |  "
-            f"{params.get('nb_pages', '?')} pages analysées  |  Mode : {mode}"
-        )
-
-        with st.expander("🔎 Recherche et filtres", expanded=True):
-            search_query = st.text_input(
-                "Recherche mots-clés",
-                value=st.session_state.get("search_query", ""),
-                key="search_query",
-                placeholder="Ex. douleur, perfusion, Mme Dupont",
-                help="Filtrer les soins par résident, acte ou catégorie.",
-            )
-            st.markdown("**Catégories à afficher**")
-            if st.button("Restaurer le filtre de base"):
-                st.session_state["category_filter"] = categories
-            # Système de checkboxes pour les catégories
-            selected_categories = []
-            cols = st.columns(3)  # 3 colonnes pour organiser les checkboxes
-            for i, cat in enumerate(categories):
-                col = cols[i % 3]
-                default_checked = cat in st.session_state.get("category_filter", categories)
-                if col.checkbox(cat, value=default_checked, key=f"cat_{cat}"):
-                    selected_categories.append(cat)
-            st.session_state["category_filter"] = selected_categories  # Mettre à jour l'état de session
-            st.caption(
-                "Cochez/décochez les catégories à afficher. Le bouton 'Restaurer le filtre de base' "
-                "sélectionne toutes les catégories."
-            )
-            floor_filter = st.selectbox(
-                "Filtrer par étage",
-                options=["Tous", "RDC (1-99)", "1er étage (100+)"],
-                index=0,
-                help="Filtrer les résultats par étage. Les chambres 1-99 sont au RDC, 100+ au 1er étage."
-            )
-
-        filtered_soins = filter_soins(soins, selected_categories, st.session_state.get("search_query", ""), floor_filter)
-        st.markdown(f"**Résultats filtrés : {len(filtered_soins)} / {len(soins)} soin(s)**")
-        render_soins_table(filtered_soins)
-
-        if filtered_soins:
-            st.divider()
-            date_str = datetime.now().strftime("%d/%m/%Y à %Hh%M")
-            with st.spinner("Génération du PDF…"):
-                pdf_bytes_export = generate_pdf(
-                    filtered_soins,
-                    params.get("debut", ""),
-                    params.get("fin", ""),
-                    date_str,
-                )
-            nom_fichier = (
-                f"planning_soins_"
-                f"{params.get('debut', '').replace(':', 'h')}_"
-                f"{params.get('fin', '').replace(':', 'h')}.pdf"
-            )
-            st.download_button(
-                label="⬇️  Télécharger le planning (PDF)",
-                data=pdf_bytes_export,
-                file_name=nom_fichier,
-                mime="application/pdf",
-                use_container_width=True,
-            )
-
-    # ── Disclaimer RGPD ───────────────────────────────────────────────────────
-    st.markdown(
-        """
-        <div class="rgpd-box">
-        <strong>Notice de confidentialité (RGPD)</strong> — Ce service traite des données de santé
-        à caractère personnel (catégorie spéciale, Art. 9 du RGPD). Aucune donnée n'est stockée
-        par cette application entre les sessions. Si une clé API Groq est utilisée, les descriptions
-        des soins (sans données personnelles) sont transmises à l'API Groq pour normalisation.
-        L'utilisation est réservée au personnel soignant habilité. En cas de question, rapprochez-vous
-        du DPO de votre établissement.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
 
 if __name__ == "__main__":
