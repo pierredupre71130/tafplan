@@ -168,7 +168,7 @@ CARE_KEYWORDS_CONTAINS = [
     'GLYCEMIE', 'DEXTRO', 'PANSEMENT', 'TENSION',
     'STOMIE', 'ESCARRE', 'OXYGENE', 'CONSTANTES', 'DIURESE',
     'PESEE', 'EXAMEN', 'BIOLOGIE', 'HEMOCULTURE', 'UROCULTURE',
-    'COMPLEMENT', 'ALIMENTAIRE',
+    'COMPLEMENT', 'ALIMENTAIRE', 'FORTIMEL', 'CLINUTREN', 'FORTEOCARE',
 ]
 
 # Patterns à exclure (actes non souhaités)
@@ -177,7 +177,6 @@ CARE_ACT_BLACKLIST = [
     r'^REFECTION PANSEMENT',   # Réfection pansement
     r'^DISTRIBUTION',          # Distribution médicaments
     r'^ENSEIGNANT',            # Enseignant APA
-    r'^OPTIFIBRE',
     r'^REGIME',
     r'^PROTECTION ',
 ]
