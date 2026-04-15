@@ -682,6 +682,215 @@ CATEGORY_RULES = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Catégories thérapeutiques médicamenteuses
+# ---------------------------------------------------------------------------
+
+MED_CATEGORIES = {
+    'Antalgiques': [
+        'paracetamol', 'doliprane', 'efferalgan', 'dafalgan', 'perfalgan',
+        'tramadol', 'topalgic', 'contramal', 'zamudol', 'monoalgic',
+        'morphine', 'sevredol', 'oramorph', 'skénan', 'moscontin',
+        'oxycodone', 'oxycontin', 'oxynorm', 'oxymorphon',
+        'codeine', 'codoliprane', 'dafalgan codeine', 'efferalgan codeine',
+        'ibuprofen', 'nurofen', 'advil', 'brufen',
+        'fentanyl', 'durogesic', 'abstral', 'actiq',
+        'nalbuphine', 'nubain', 'acupan', 'nefopam',
+        'ketamine', 'lamaline', 'neo-codion', 'antarene',
+        'buprenorphine', 'temgesic',
+    ],
+    'Psychotropes': [
+        # Anxiolytiques / hypnotiques
+        'alprazolam', 'xanax', 'diazepam', 'valium', 'lorazepam', 'temesta',
+        'oxazepam', 'seresta', 'bromazepam', 'lexomil', 'prazepam', 'lysanxia',
+        'clorazepate', 'tranxene', 'zolpidem', 'stilnox', 'zopiclone', 'imovane',
+        'clonazepam', 'rivotril', 'nitrazepam', 'mogadon',
+        # Antidépresseurs
+        'sertraline', 'zoloft', 'fluoxetine', 'prozac', 'paroxetine', 'deroxat',
+        'escitalopram', 'seroplex', 'citalopram', 'seropram', 'venlafaxine', 'effexor',
+        'mirtazapine', 'norset', 'duloxetine', 'cymbalta', 'amitriptyline', 'laroxyl',
+        'clomipramine', 'anafranil', 'maprotiline', 'ludiomil', 'agomelatine', 'valdoxan',
+        'milnacipran', 'ixel', 'fluvoxamine', 'floxyfral', 'bupropion', 'wellbutrin',
+        # Neuroleptiques / antipsychotiques
+        'risperidone', 'risperdal', 'olanzapine', 'zyprexa', 'quetiapine', 'xeroquel',
+        'haloperidol', 'haldol', 'loxapine', 'loxapac', 'clozapine', 'leponex',
+        'aripiprazole', 'abilify', 'tiapride', 'tiapridal', 'cyamemazine', 'tercian',
+        'levomepromazine', 'nozinan', 'ziprasidone', 'zeldox', 'amisulpride', 'solian',
+        'chlorpromazine', 'largactil', 'pipotiazine', 'piportil',
+        # Thymorégulateurs / antiépileptiques (psychiatrie)
+        'lithium', 'teralithe', 'valproate', 'depakote', 'depakine',
+        # Anticholinestérasiques (démence)
+        'donepezil', 'aricept', 'rivastigmine', 'exelon', 'galantamine', 'reminyl',
+        'memantine', 'ebixa', 'axura',
+    ],
+    'Traitements cardiaques': [
+        # Antihypertenseurs - IEC
+        'ramipril', 'triatec', 'perindopril', 'coversyl', 'enalapril', 'renitec',
+        'lisinopril', 'zestril', 'captopril', 'lopril', 'fosinopril', 'fozitec',
+        # ARA II
+        'valsartan', 'nisis', 'irbesartan', 'aprovel', 'losartan', 'cozaar',
+        'olmesartan', 'alteis', 'telmisartan', 'micardis', 'candesartan', 'atacand',
+        # Bêtabloquants
+        'bisoprolol', 'cardensiel', 'metoprolol', 'seloken', 'carvedilol', 'kredex',
+        'nebivolol', 'temerit', 'atenolol', 'tenormin', 'propranolol', 'avlocardyl',
+        # Inhibiteurs calciques
+        'amlodipine', 'amlor', 'lercanidipine', 'zanidip', 'nifedipine', 'adalate',
+        'felodipine', 'plendil', 'diltiazem', 'tildiem', 'verapamil', 'isoptine',
+        # Diurétiques
+        'furosemide', 'lasilix', 'bumetanide', 'indapamide', 'fludex',
+        'hydrochlorothiazide', 'esidrex', 'spironolactone', 'aldactone',
+        'eplerenone', 'inspra', 'amiloride', 'modamide',
+        # Anti-arythmiques
+        'digoxine', 'digoxin', 'amiodarone', 'cordarone', 'flecainide', 'flecaine',
+        'sotalol', 'sotalex',
+        # Dérivés nitrés
+        'isosorbide', 'risordan', 'trinitrine', 'monicor', 'nicorandil', 'ikorel',
+        # Statines / hypolipémiants
+        'atorvastatine', 'tahor', 'simvastatine', 'zocor', 'rosuvastatine', 'crestor',
+        'pravastatine', 'elisor', 'fluvastatine', 'lescol', 'ezetimibe', 'ezetrol',
+        # Inhibiteurs néprylisine
+        'sacubitril', 'entresto', 'ivabradine', 'procoralan',
+    ],
+    'Anticoagulants': [
+        # AVK
+        'warfarine', 'coumadine', 'acenocoumarol', 'sintrom', 'fluindione', 'previscan',
+        # AOD
+        'rivaroxaban', 'xarelto', 'apixaban', 'eliquis', 'dabigatran', 'pradaxa',
+        'edoxaban', 'lixiana',
+        # Héparines
+        'heparine', 'heparin', 'enoxaparine', 'lovenox', 'tinzaparine', 'innohep',
+        'dalteparine', 'fragmine', 'nadroparine', 'fraxiparine', 'fondaparinux', 'arixtra',
+        # Antiagrégants
+        'aspirine', 'kardegic', 'aspegic', 'clopidogrel', 'plavix', 'ticagrelor', 'brilique',
+        'prasugrel', 'efient', 'dipyridamole', 'persantine', 'ticlopidine', 'ticlid',
+    ],
+    'Traitements respiratoires': [
+        'ventoline', 'salbutamol', 'bricanyl', 'terbutaline', 'bambuterol',
+        'seretide', 'symbicort', 'fostair', 'trimbow', 'duoresp',
+        'spiriva', 'tiotropium', 'anoro', 'umeclidinium', 'incruse',
+        'atrovent', 'ipratropium', 'onbrez', 'indacaterol', 'striverdi', 'formoterol',
+        'trelegy', 'relvar', 'braltus',
+        'pulmicort', 'budesonide', 'flixotide', 'fluticasone', 'becotide', 'beclometasone',
+        'montelukast', 'singulair', 'zafirlukast', 'accolate',
+        'carbocisteine', 'rhinathiol', 'acetylcysteine', 'mucomyst', 'fluimucil',
+        'roflumilast', 'daxas',
+    ],
+    'Traitements diabète': [
+        'insuline', 'insulin', 'novorapid', 'humalog', 'apidra', 'fiasp',
+        'lantus', 'toujeo', 'tresiba', 'abasaglar', 'levemir', 'glargine', 'detemir',
+        'novomix', 'humalog mix', 'mixtard',
+        'metformine', 'glucophage', 'stagid', 'glucinan',
+        'sitagliptine', 'januvia', 'vildagliptine', 'galvus', 'saxagliptine', 'onglyza',
+        'linagliptine', 'trajenta', 'alogliptine', 'vipidia',
+        'empagliflozine', 'jardiance', 'dapagliflozine', 'forxiga', 'canagliflozine', 'invokana',
+        'liraglutide', 'victoza', 'semaglutide', 'ozempic', 'dulaglutide', 'trulicity',
+        'glimepiride', 'amarel', 'glipizide', 'minidiab', 'gliclazide', 'diamicron',
+        'acarbose', 'glucor', 'repaglinide', 'novonorm',
+    ],
+    'Antibiotiques': [
+        'amoxicilline', 'clamoxyl', 'augmentin', 'amoxiclav',
+        'azithromycine', 'zithromax', 'clarithromycine', 'zeclar', 'spiramycine', 'rovamycine',
+        'ciprofloxacine', 'ciflox', 'levofloxacine', 'tavanic', 'ofloxacine', 'oflocet',
+        'doxycycline', 'vibramycine', 'tetracycline',
+        'metronidazole', 'flagyl', 'secnidazole', 'flagentyl',
+        'trimethoprime', 'bactrim', 'cotrimoxazole',
+        'nitrofurantoine', 'furadantine', 'macrobid',
+        'cefuroxime', 'zinnat', 'cefixime', 'oroken', 'cefpodoxime', 'orelox',
+        'fosfomycine', 'monuril',
+        'linezolide', 'zyvoxid', 'vancomycine', 'clindamycine', 'dalacine',
+        'pivmecillinam', 'selexid', 'amikacine', 'gentamicine',
+    ],
+}
+
+
+def _normalize(text: str) -> str:
+    """Minuscules + suppression accents pour comparaison."""
+    import unicodedata
+    text = text.lower()
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', text)
+        if unicodedata.category(c) != 'Mn'
+    )
+
+
+def classify_medication(drug_line: str) -> str | None:
+    """Retourne la catégorie thérapeutique du médicament ou None."""
+    normalized = _normalize(drug_line)
+    for category, keywords in MED_CATEGORIES.items():
+        if any(kw in normalized for kw in keywords):
+            return category
+    return None
+
+
+def extract_medications(pdf_bytes: bytes) -> list:
+    """
+    Extrait tous les médicaments du PDF avec leur patient, catégorie et nom.
+    Retourne une liste de dicts {resident, room, drug, category}.
+    """
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    results = []
+    seen = set()
+
+    for page_num in range(len(doc)):
+        text = doc[page_num].get_text()
+        if not text.strip():
+            continue
+
+        patient_match = re.search(r'Patient\s*:\s*(.+)', text)
+        patient = format_patient_name(patient_match.group(1)) if patient_match else 'Résident inconnu'
+
+        room_match = re.search(r'Chambre\s*[:\-]?\s*(\w+)', text, re.IGNORECASE)
+        room = room_match.group(1).strip() if room_match else ''
+
+        blocks = re.split(r'Début le \d{2}/\d{2}/\d{2,4} à \d{2}:\d{2}', text)
+
+        for block in blocks[1:]:
+            # Ne garder que les blocs qui ressemblent à des médicaments
+            has_dose = bool(re.search(r'\d+\s*(mg|mL|UI|µg|mcg|ug|g\b)', block[:300], re.I))
+            has_form = bool(re.search(
+                r'\b(comprimé|gélule|sachet|ampoule|cpr|gél|pdr|buvable|sirop|patch|goutte|solution|suspension)\b',
+                block[:300], re.I
+            ))
+            if not has_dose and not has_form:
+                continue
+
+            # Extraire le nom du médicament (première ligne non-heure non-triviale)
+            drug_line = None
+            for line in block.split('\n'):
+                line = line.strip()
+                if not line or line in ('c', 'g', 'j', 'h', 'mg', 'mL'):
+                    continue
+                if re.match(r'^\d{2}:\d{2}', line):
+                    continue
+                if re.match(r'^\d+[\.,]?\d*\s*(mg|mL|UI|g|µg)', line, re.I):
+                    continue
+                if len(line) > 3:
+                    drug_line = line
+                    break
+
+            if not drug_line:
+                continue
+
+            category = classify_medication(drug_line)
+            if not category:
+                continue
+
+            key = (patient, _normalize(drug_line[:40]))
+            if key in seen:
+                continue
+            seen.add(key)
+
+            results.append({
+                'resident': patient,
+                'room': room,
+                'drug': drug_line[:80].strip(),
+                'category': category,
+            })
+
+    doc.close()
+    return sorted(results, key=lambda x: (x['resident'], x['category']))
+
+
 def categorize_care_act(description: str) -> str:
     import unicodedata
     text = (description or "").upper()
@@ -917,14 +1126,103 @@ def main():
 
     # ── En-tête ───────────────────────────────────────────────────────────────
     st.title("TAFPLAN — Planning des soins")
-    st.markdown(
-        "Importez le planning PDF de l'EHPAD et obtenez les **actes de soins infirmiers** "
-        "filtrés par tranche horaire — toutes les pages analysées automatiquement."
-    )
     st.divider()
 
-    # ── Zone de saisie ────────────────────────────────────────────────────────
-    col_upload, col_heures = st.columns([3, 2], gap="large")
+    # ── Onglets principaux ────────────────────────────────────────────────────
+    tab_soins, tab_med = st.tabs(["🩺 Soins infirmiers", "💊 Médicaments par résident"])
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # ONGLET 2 — MÉDICAMENTS PAR RÉSIDENT
+    # ════════════════════════════════════════════════════════════════════════════
+    with tab_med:
+        st.markdown("### 💊 Recherche de médicaments par catégorie")
+        st.markdown(
+            "Recherchez quels résidents ont tel type de traitement, "
+            "ou les médicaments d'un résident spécifique."
+        )
+
+        uploaded_file_med = st.file_uploader(
+            "Importer le planning PDF",
+            type=["pdf"],
+            key="pdf_med",
+            label_visibility="collapsed",
+            help="Même PDF que dans l'onglet Soins"
+        )
+
+        if uploaded_file_med:
+            # Sélection des catégories
+            st.markdown("**Catégories à rechercher :**")
+            cat_cols = st.columns(2)
+            selected_cats = []
+            for i, cat in enumerate(MED_CATEGORIES.keys()):
+                if cat_cols[i % 2].checkbox(cat, value=True, key=f"med_cat_{cat}"):
+                    selected_cats.append(cat)
+
+            # Recherche par résident
+            search_resident = st.text_input(
+                "🔍 Rechercher un résident (optionnel)",
+                placeholder="Ex: Dupont, M. Martin…",
+            )
+
+            if st.button("🔍 Rechercher les médicaments", type="primary", use_container_width=True):
+                with st.spinner("Analyse du PDF…"):
+                    all_meds = extract_medications(uploaded_file_med.read())
+                st.session_state["med_results"] = all_meds
+
+        if st.session_state.get("med_results"):
+            all_meds = st.session_state["med_results"]
+            search_resident = st.session_state.get("search_resident_val", "")
+
+            # Appliquer filtres
+            filtered = [
+                m for m in all_meds
+                if m['category'] in (selected_cats if 'selected_cats' in dir() else list(MED_CATEGORIES.keys()))
+            ]
+            if search_resident:
+                filtered = [
+                    m for m in filtered
+                    if search_resident.lower() in m['resident'].lower()
+                ]
+
+            st.divider()
+            st.markdown(
+                f"**{len(set(m['resident'] for m in filtered))} résident(s)** — "
+                f"**{len(filtered)} médicament(s)** trouvé(s)"
+            )
+
+            # Grouper par patient
+            from collections import OrderedDict
+            patients_med = OrderedDict()
+            for m in filtered:
+                k = m['resident']
+                if k not in patients_med:
+                    patients_med[k] = {'room': m['room'], 'meds': []}
+                patients_med[k]['meds'].append(m)
+
+            cards = ""
+            for resident, data in patients_med.items():
+                room = data['room']
+                room_str = f"🚪 Ch. {room} &nbsp;|&nbsp; " if room else ''
+                lignes = ""
+                for m in data['meds']:
+                    cat_badge = f"<span style='background:#FFF3E0;color:#FF6B00;font-size:0.72rem;font-weight:600;padding:1px 6px;border-radius:8px;margin-right:5px'>{m['category']}</span>"
+                    lignes += f"""
+                    <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #FFF3E0;">
+                        <span>{cat_badge}{m['drug']}</span>
+                    </div>"""
+                cards += f"""
+                <div class="care-card">
+                    <div class="care-card-resident" style="margin-bottom:8px">{room_str}👤 <strong>{resident}</strong></div>
+                    {lignes}
+                </div>"""
+            st.markdown(cards, unsafe_allow_html=True)
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # ONGLET 1 — SOINS INFIRMIERS
+    # ════════════════════════════════════════════════════════════════════════════
+    with tab_soins:
+        # ── Zone de saisie ────────────────────────────────────────────────────────
+        col_upload, col_heures = st.columns([3, 2], gap="large")
 
     with col_upload:
         uploaded_file = st.file_uploader(
