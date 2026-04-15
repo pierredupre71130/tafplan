@@ -668,7 +668,7 @@ CATEGORY_RULES = [
     ("Psychologue", ["PSYCHOLOGUE", "BILAN PSYCHO"]),
     ("Lever", ["LEVER", "FAUTEUIL"]),
     ("Hydratation", ["HYDRATATION", "BOISSON", "STIMULATION"]),
-    ("Enseignement", ["ENSEIGNANT", "APA"]),
+    ("Enseignement", ["ENSEIGNANT APA", "ENSEIGNANT"]),
     ("Compléments alimentaires", ["COMPLEMENT", "FORTIMEL", "CALCIDOSE", "OPTIFIBRE", "PROTEINE", "NUTRITION", "DIETETIQUE"]),
     ("Traitements si besoin", ["TRAITEMENT SI BESOIN"]),
 ]
