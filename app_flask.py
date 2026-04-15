@@ -490,33 +490,13 @@ def analyze():
         heure_debut = time(h_d, m_d)
         heure_fin = time(h_f, m_f)
 
-        # Extraction
+        # Extraction — renvoie TOUS les soins, le filtrage par catégorie se fait côté client
         soins = extract_care_acts(pdf_bytes, heure_debut, heure_fin)
         soins = sort_soins(soins)
 
-        # Filtrage
-        filtered_soins = filter_soins(soins, categories_selected, "")
-
-        # Format pour JSON
-        result_data = []
-        patients = OrderedDict()
-        for s in filtered_soins:
-            key = s.get('resident') or 'Résident inconnu'
-            if key not in patients:
-                patients[key] = {'room': s.get('room', ''), 'soins': []}
-            patients[key]['soins'].append(s)
-
-        for resident, data in patients.items():
-            result_data.append({
-                'resident': resident,
-                'room': data['room'],
-                'soins': data['soins']
-            })
-
         return jsonify({
             'success': True,
-            'total': len(filtered_soins),
-            'patients': result_data,
+            'soins': soins,
             'heure_debut': heure_debut_str,
             'heure_fin': heure_fin_str,
         })

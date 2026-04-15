@@ -352,67 +352,72 @@
 
     <script>
         const categories = {{ categories | tojson }};
-        const resultsData = {};
+
+        // Stockage des soins après extraction — pas de re-upload pour filtrer
+        let allSoins = [];
+        let currentHeureDebut = '';
+        let currentHeureFin = '';
 
         // Remplir les checkboxes
         const grid = document.getElementById('categoriesGrid');
         categories.forEach(cat => {
             const label = document.createElement('label');
             label.className = 'checkbox-label';
-            label.innerHTML = `
-                <input type="checkbox" name="categories" value="${cat}">
-                <span>${cat}</span>
-            `;
+            label.innerHTML = `<input type="checkbox" name="categories" value="${cat}"><span>${cat}</span>`;
             grid.appendChild(label);
         });
 
-        // Form submit
+        // Filtrage client-side — appelé après upload ET à chaque changement de checkbox
+        function applyFilters() {
+            if (!allSoins.length) return;
+
+            const selected = [];
+            document.querySelectorAll('input[name="categories"]:checked').forEach(cb => selected.push(cb.value));
+
+            const filtered = selected.length > 0 ? allSoins.filter(s => selected.includes(s.category)) : allSoins;
+
+            // Grouper par patient
+            const patientMap = {};
+            const patientOrder = [];
+            filtered.forEach(s => {
+                const key = s.resident || 'Résident inconnu';
+                if (!patientMap[key]) { patientMap[key] = { room: s.room || '', soins: [] }; patientOrder.push(key); }
+                patientMap[key].soins.push(s);
+            });
+
+            const patients = patientOrder.map(k => ({ resident: k, room: patientMap[k].room, soins: patientMap[k].soins }));
+            displayResults(filtered.length, patients);
+
+            // Mettre à jour les données pour l'export
+            window.exportData = { soins: filtered, heure_debut: currentHeureDebut, heure_fin: currentHeureFin };
+        }
+
+        // Re-filtrer à chaque changement de checkbox (sans re-uploader le PDF)
+        document.getElementById('categoriesGrid').addEventListener('change', applyFilters);
+
+        // Form submit — upload PDF et extraction (une seule fois par PDF/tranche)
         document.getElementById('analysisForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const form = document.getElementById('analysisForm');
-            const formData = new FormData(form);
-
-            // Vérifier heure
             const h_d = parseInt(document.getElementById('heureDebut').value.split(':')[0]);
             const h_f = parseInt(document.getElementById('heureFin').value.split(':')[0]);
-            if (h_d >= h_f) {
-                showError('L\'heure de fin doit être après l\'heure de début');
-                return;
-            }
+            if (h_d >= h_f) { showError("L'heure de fin doit être après l'heure de début"); return; }
 
-            // Récupérer catégories sélectionnées
-            const categories = [];
-            document.querySelectorAll('input[name="categories"]:checked').forEach(cb => {
-                categories.push(cb.value);
-            });
-            categories.forEach(cat => formData.append('categories[]', cat));
-
+            const formData = new FormData(document.getElementById('analysisForm'));
             showLoading(true);
             hideError();
 
             try {
-                const response = await fetch('/api/analyze', {
-                    method: 'POST',
-                    body: formData
-                });
-
+                const response = await fetch('/api/analyze', { method: 'POST', body: formData });
                 const data = await response.json();
 
                 if (data.success) {
-                    displayResults(data);
-                    resultsData.soins = [];
-                    resultsData.heure_debut = data.heure_debut;
-                    resultsData.heure_fin = data.heure_fin;
-
-                    // Extraire tous les soins des patients
-                    data.patients.forEach(p => {
-                        p.soins.forEach(s => {
-                            resultsData.soins.push(s);
-                        });
-                    });
+                    allSoins = data.soins;
+                    currentHeureDebut = data.heure_debut;
+                    currentHeureFin = data.heure_fin;
+                    applyFilters();
                 } else {
-                    showError(data.error || 'Erreur lors de l\'analyse');
+                    showError(data.error || "Erreur lors de l'analyse");
                 }
             } catch (err) {
                 showError('Erreur: ' + err.message);
@@ -421,17 +426,15 @@
             }
         });
 
-        function displayResults(data) {
+        function displayResults(total, patients) {
             const content = document.getElementById('resultsContent');
             content.innerHTML = '';
+            document.getElementById('resultCount').textContent = `${total} soin(s)`;
 
-            document.getElementById('resultCount').textContent = `${data.total} soin(s)`;
-
-            data.patients.forEach(patient => {
+            patients.forEach(patient => {
                 const card = document.createElement('div');
                 card.className = 'patient-card';
-
-                let room_str = patient.room ? `🚪 Ch. ${patient.room} &nbsp;|&nbsp; ` : '';
+                const room_str = patient.room ? `🚪 Ch. ${patient.room} &nbsp;|&nbsp; ` : '';
                 card.innerHTML = `<div class="patient-header">${room_str}👤 <strong>${patient.resident}</strong></div>`;
 
                 const soinsDiv = document.createElement('div');
@@ -439,13 +442,9 @@
                     const heure = soin.heure ? soin.heure.replace(':', 'h') : '—';
                     const cat = soin.category || '';
                     const catBadge = cat ? `<span class="soin-category">${cat}</span>` : '';
-
                     const item = document.createElement('div');
                     item.className = 'soin-item';
-                    item.innerHTML = `
-                        <span class="soin-heure">🕐 ${heure}</span>
-                        <span class="soin-description">${catBadge}${soin.description}</span>
-                    `;
+                    item.innerHTML = `<span class="soin-heure">🕐 ${heure}</span><span class="soin-description">${catBadge}${soin.description}</span>`;
                     soinsDiv.appendChild(item);
                 });
 
@@ -458,19 +457,20 @@
 
         // Export PDF
         document.getElementById('exportBtn').addEventListener('click', async () => {
+            const data = window.exportData;
+            if (!data) return;
             try {
                 const response = await fetch('/api/export-pdf', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(resultsData)
+                    body: JSON.stringify(data)
                 });
-
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `planning_soins_${resultsData.heure_debut.replace(':', 'h')}_${resultsData.heure_fin.replace(':', 'h')}.pdf`;
+                    a.download = `planning_soins_${data.heure_debut.replace(':', 'h')}_${data.heure_fin.replace(':', 'h')}.pdf`;
                     a.click();
                 }
             } catch (err) {
@@ -478,19 +478,9 @@
             }
         });
 
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-        }
-
-        function showError(msg) {
-            const err = document.getElementById('errorMsg');
-            err.textContent = msg;
-            err.style.display = 'block';
-        }
-
-        function hideError() {
-            document.getElementById('errorMsg').style.display = 'none';
-        }
+        function showLoading(show) { document.getElementById('loading').style.display = show ? 'block' : 'none'; }
+        function showError(msg) { const e = document.getElementById('errorMsg'); e.textContent = msg; e.style.display = 'block'; }
+        function hideError() { document.getElementById('errorMsg').style.display = 'none'; }
     </script>
 </body>
 </html>
