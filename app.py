@@ -675,7 +675,13 @@ CATEGORY_RULES = [
 
 
 def categorize_care_act(description: str) -> str:
+    import unicodedata
     text = (description or "").upper()
+    # Supprimer les accents pour la comparaison (é→E, è→E, etc.)
+    text = ''.join(
+        c for c in unicodedata.normalize('NFD', text)
+        if unicodedata.category(c) != 'Mn'
+    )
     for category, keywords in CATEGORY_RULES:
         if any(keyword in text for keyword in keywords):
             return category
