@@ -302,14 +302,17 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
         room_match = re.search(r'Chambre\s*:\s*(.+)', text)
         room = room_match.group(1).strip() if room_match else 'Inconnue'
 
+        dates_debut = re.findall(r'Début le (\d{2}/\d{2}/\d{2,4}) à \d{2}:\d{2}', text)
         blocks = re.split(r'Début le \d{2}/\d{2}/\d{2,4} à \d{2}:\d{2}', text)
 
-        for block in blocks[1:]:
+        for i, block in enumerate(blocks[1:]):
+            date_debut = dates_debut[i] if i < len(dates_debut) else None
             # Extraction collyres, injections SC, perfusions IV, traitements si besoin
             for act in extract_medication_care_acts(block, patient, room, heure_debut, heure_fin):
                 key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
                 if key not in seen:
                     seen.add(key)
+                    act['date_debut'] = date_debut
                     results.append(act)
 
             # Extraction compléments alimentaires (hors Note médecin pour éviter doublon)
@@ -317,6 +320,7 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                 key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
                 if key not in seen:
                     seen.add(key)
+                    act['date_debut'] = date_debut
                     results.append(act)
 
             # Extraction spéciale pour les barrières
@@ -332,6 +336,7 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                             'heure': None,
                             'description': 'Barrières mises en place',
                             'category': 'Contentions physiques',
+                            'date_debut': date_debut,
                         })
                     break
 
@@ -472,6 +477,7 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                             'heure': t_str,
                             'description': description,
                             'category': category,
+                            'date_debut': date_debut,
                         })
             elif not times_in_block:
                 key = (patient, act_key, None)
@@ -483,6 +489,7 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                         'heure': None,
                         'description': description,
                         'category': category,
+                        'date_debut': date_debut,
                     })
 
     doc.close()

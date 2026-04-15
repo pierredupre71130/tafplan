@@ -232,6 +232,13 @@
             border-bottom: none;
         }
 
+        .soin-date {
+            display: inline-block;
+            color: #999;
+            font-size: 0.78rem;
+            margin-left: 8px;
+        }
+
         .soin-heure {
             font-weight: 700;
             color: #FF6B00;
@@ -447,7 +454,8 @@
                     const catBadge = cat ? `<span class="soin-category">${cat}</span>` : '';
                     const item = document.createElement('div');
                     item.className = 'soin-item';
-                    item.innerHTML = `<span class="soin-heure">🕐 ${heure}</span><span class="soin-description">${catBadge}${soin.description}</span>`;
+                    const dateStr = soin.date_debut ? `<span class="soin-date">depuis ${soin.date_debut}</span>` : '';
+                    item.innerHTML = `<span class="soin-heure">🕐 ${heure}</span><span class="soin-description">${catBadge}${soin.description}${dateStr}</span>`;
                     soinsDiv.appendChild(item);
                 });
 
