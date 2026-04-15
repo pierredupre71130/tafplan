@@ -331,6 +331,31 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                         })
                     break
 
+            # Filtre médicaments : exclure si c'est un bloc de médicament (dosages, formes galéniques)
+            block_sans_note = re.split(r'Note m[eé]decin\s*:', block, flags=re.IGNORECASE)[0]
+            check_zone = block_sans_note[:300]
+
+            # Vérifier si c'est un complément alimentaire (ne pas filtrer comme médicament)
+            is_dietary = (
+                'COMPLEMENT' in check_zone.upper() or 'ALIMENTAIRE' in check_zone.upper() or
+                any(prod in check_zone.upper() for prod in [
+                    'FORTIMEL', 'CALCIDOSE', 'OPTIFIBRE', 'CLINUTREN',
+                    'RENUTRYL', 'NUTRIDRINK', 'ENSURE', 'FRESUBIN',
+                    'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH', 'SUPPLEMENT',
+                    'FORTEOCARE', 'DESSERT'
+                ])
+            )
+
+            if not is_dietary:
+                if re.search(r'\d+\s*(mg|mL|UI|µg|mcg|ug)\b', check_zone, re.I):
+                    continue
+                if re.search(
+                    r'\b(comprimé|gélule|sachet|ampoule|cpr|gél|pdr|'
+                    r'cp\s?séc|cp\s?orodis|buvable|sirop|patch|goutte)\b',
+                    check_zone, re.I
+                ):
+                    continue
+
             # Extraction standard
             act_lines = []
             for raw_line in block.split('\n'):
@@ -340,6 +365,8 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                 if re.match(r'^\d{2}:\d{2}', line):
                     continue
                 if re.match(r'^\d+[\.,]\d+\s*Kg', line):
+                    continue
+                if re.match(r'^\*\s*\d', line):
                     continue
                 if line == line.upper() and re.search(r'[A-Z]{3}', line) and not re.match(r'^\d', line):
                     act_lines.append(line.rstrip('.,;'))
@@ -355,6 +382,10 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                         continue
                     if re.match(r'^\d{2}:\d{2}', line):
                         continue
+                    if re.match(r'^\d+[\.,]\d+\s*Kg', line):
+                        continue
+                    if re.match(r'^\*\s*\d', line):
+                        continue
                     if is_care_act(line):
                         act_lines = [line.rstrip('.,;')]
                         break
@@ -363,10 +394,46 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                 continue
 
             act_name = ' '.join(act_lines).strip()
+            act_name = re.sub(r'\s+', ' ', act_name)
+
             if not is_care_act(act_name):
                 continue
 
             description = title_fr(act_name)
+            act_upper = act_name.upper()
+            act_norm = _normalize(act_upper)
+
+            # Normalisation de variantes de contentions physiques
+            if 'BARRIERES MISES EN PLACE' in act_norm or 'BARRIERES AU LIT' in act_norm or 'BARRIERE AU LIT' in act_norm:
+                description = 'Barrières au lit'
+            elif 'CONTENTIONS FAUTEUIL' in act_norm:
+                description = 'Contentions fauteuil'
+            elif 'SANGLE VENTRALE' in act_norm:
+                description = 'Sangle ventrale'
+
+            # Détection de compléments alimentaires dans le nom de l'acte
+            is_complement = 'COMPLEMENT' in act_upper
+            if not is_complement:
+                PRODUITS = ['FORTIMEL', 'CALCIDOSE', 'OPTIFIBRE', 'CLINUTREN',
+                            'RENUTRYL', 'NUTRIDRINK', 'ENSURE', 'FRESUBIN',
+                            'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH',
+                            'SUPPLEMENT', 'ALIMENTAIRE', 'FORTEOCARE', 'DESSERT']
+                for prod in PRODUITS:
+                    if prod in act_upper:
+                        is_complement = True
+                        break
+
+            if is_complement:
+                note_m = re.search(r'Note m[eé]decin\s*:\s*(.{2,50})', block, re.IGNORECASE)
+                if note_m:
+                    produit = note_m.group(1).strip().rstrip('.,').title()
+                    description = f"Complément alimentaire ({produit})"
+                else:
+                    for prod in PRODUITS:
+                        if prod in block.upper():
+                            description = f"Complément alimentaire ({prod.title()})"
+                            break
+
             category = categorize_care_act(act_name)
 
             times_in_block = re.findall(r'(\d{2}:\d{2})', block)
