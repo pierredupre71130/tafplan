@@ -80,6 +80,48 @@ CATEGORY_RULES = [
     ("Traitements si besoin", ["TRAITEMENT SI BESOIN"]),
 ]
 
+MEDICATION_CATEGORY_RULES = [
+    ("Antalgiques", [
+        "PARACETAMOL", "DOLIPRANE", "EFFERALGAN", "DAFALGAN", "CODEINE", "TRAMADOL",
+        "TOPALGIC", "IXPRIM", "MORPHINE", "OXYCODONE", "OXYCONTIN", "IBUPROFENE",
+        "KETOPROFENE", "NEFOPAM", "ACUPAN", "LAMALINE", "ANTALGIQUE",
+    ]),
+    ("Psychotropes", [
+        "RISPERIDONE", "RISPERDAL", "HALOPERIDOL", "HALDOL", "OLANZAPINE", "ZYPREXA",
+        "QUETIAPINE", "XEROQUEL", "ARIPIPRAZOLE", "ABILIFY", "LORAZEPAM", "TEMESTA",
+        "DIAZEPAM", "VALIUM", "BROMAZEPAM", "LEXOMIL", "ALPRAZOLAM", "XANAX",
+        "CLORAZEPATE", "TRANXENE", "ZOPICLONE", "IMOVANE", "ZOLPIDEM", "STILNOX",
+        "MELATONINE", "SERTRALINE", "ZOLOFT", "PAROXETINE", "DEROXAT", "ESCITALOPRAM",
+        "SEROPLEX", "VENLAFAXINE", "EFFEXOR", "MIRTAZAPINE", "NORSET", "AMITRIPTYLINE",
+        "LAROXYL", "VALPROATE", "DEPAKINE", "LITHIUM", "TERCIAN", "LARGACTIL",
+        "CLOMIPRAMINE", "ANAFRANIL", "PSYCHOTROPE",
+    ]),
+    ("Traitements cardiaques", [
+        "AMLODIPINE", "AMLOR", "BISOPROLOL", "CARDENSIEL", "RAMIPRIL", "TRIATEC",
+        "LISINOPRIL", "ZESTRIL", "PERINDOPRIL", "COVERSYL", "VALSARTAN", "TAREG",
+        "ATENOLOL", "TENORMINE", "METOPROLOL", "SELOKEN", "DIGOXINE", "AMIODARONE",
+        "CORDARONE", "LERCANIDIPINE", "ZANIDIP", "CANDESARTAN", "KENZEN", "LOSARTAN",
+        "COZAAR", "IRBESARTAN", "APROVEL", "DILTIAZEM", "TILDIEM", "NITROGLYCERIN",
+        "ISOSORBIDE", "ENALAPRIL", "RENITEC", "CARVEDILOL", "NEBIVOLOL", "FLECAINE",
+        "ANTIARYTHMIQUE",
+    ]),
+    ("Traitements diabétiques", [
+        "METFORMINE", "GLUCOPHAGE", "GLIPIZIDE", "MINIDIAB", "GLICLAZIDE", "DIAMICRON",
+        "GLIBENCLAMIDE", "DAONIL", "SITAGLIPTINE", "JANUVIA", "VILDAGLIPTINE", "GALVUS",
+        "PIOGLITAZONE", "ACTOS", "EMPAGLIFLOZINE", "JARDIANCE", "DAPAGLIFLOZINE",
+        "FORXIGA", "LIRAGLUTIDE", "VICTOZA", "ANTIDIABETIQUE",
+    ]),
+    ("Traitements anticoagulants", [
+        "WARFARINE", "COUMADINE", "RIVAROXABAN", "XARELTO", "APIXABAN", "ELIQUIS",
+        "DABIGATRAN", "PRADAXA", "HEPARINE", "ENOXAPARINE", "LOVENOX", "TINZAPARINE",
+        "INNOHEP", "ACENOCOUMAROL", "SINTROM", "FLUINDIONE", "PREVISCAN", "ANTICOAGULANT",
+    ]),
+    ("Traitements diurétiques", [
+        "FUROSEMIDE", "LASILIX", "SPIRONOLACTONE", "ALDACTONE", "TORASEMIDE",
+        "INDAPAMIDE", "FLUDEX", "HYDROCHLOROTHIAZIDE", "BUMETANIDE", "DIURETIQUE",
+    ]),
+]
+
 # ═══════════════════════════════════════════════════════════════════════════
 # UTILITAIRES
 # ═══════════════════════════════════════════════════════════════════════════
@@ -292,6 +334,36 @@ def get_room_number(room: str) -> int:
 def title_fr(text: str) -> str:
     return ' '.join(word.capitalize() for word in text.lower().split())
 
+def extract_medication_types(block: str, patient: str, room: str,
+                              heure_debut: time, heure_fin: time) -> list:
+    """Détecte les médicaments par catégorie thérapeutique (antalgiques, psychotropes, etc.)"""
+    results = []
+    block_norm = _normalize(block)
+
+    for category, keywords in MEDICATION_CATEGORY_RULES:
+        for kw in keywords:
+            if _normalize(kw) in block_norm:
+                times = _times_in_range(block, heure_debut, heure_fin)
+                lines = [l.strip() for l in block.split('\n') if l.strip()]
+                drug_line = next(
+                    (l for l in lines if len(l) > 3 and not re.match(r'^\d', l)
+                     and l not in ('c', 'g', 'h', 'j')
+                     and not re.match(r'^Note\s', l, re.I)), None
+                )
+                if not drug_line:
+                    break
+                desc = drug_line[:60].strip().title()
+                if times:
+                    for t in times:
+                        results.append({'resident': patient, 'room': room, 'heure': t,
+                                        'description': desc, 'category': category})
+                else:
+                    results.append({'resident': patient, 'room': room, 'heure': None,
+                                    'description': desc, 'category': category})
+                break  # Un seul match par catégorie par bloc
+    return results
+
+
 def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> list:
     """Extraction simplifée des actes de soins"""
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
@@ -363,13 +435,19 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
             )
 
             if not is_dietary:
-                if re.search(r'\d+\s*(mg|mL|UI|µg|mcg|ug)\b', check_zone, re.I):
-                    continue
-                if re.search(
-                    r'\b(comprimé|gélule|sachet|ampoule|cpr|gél|pdr|'
-                    r'cp\s?séc|cp\s?orodis|buvable|sirop|patch|goutte)\b',
-                    check_zone, re.I
-                ):
+                is_med = bool(
+                    re.search(r'\d+\s*(mg|mL|UI|µg|mcg|ug)\b', check_zone, re.I) or
+                    re.search(r'\b(comprimé|gélule|sachet|ampoule|cpr|gél|pdr|'
+                              r'cp\s?séc|cp\s?orodis|buvable|sirop|patch|goutte)\b',
+                              check_zone, re.I)
+                )
+                if is_med:
+                    for act in extract_medication_types(block, patient, room, heure_debut, heure_fin):
+                        key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
+                        if key not in seen:
+                            seen.add(key)
+                            act['date_debut'] = date_debut
+                            results.append(act)
                     continue
 
             # Extraction standard

@@ -355,6 +355,19 @@
             </div>
             <div id="resultsContent"></div>
         </div>
+
+        <div class="results-section" id="residentSection" style="display:none; margin-top:20px;">
+            <div class="results-header">
+                <h2>👤 Prescriptions par résident</h2>
+            </div>
+            <div class="form-group" style="margin-bottom:20px;">
+                <label for="residentSelect">Choisir un résident</label>
+                <select id="residentSelect" style="width:100%;padding:12px;border:2px solid #ddd;border-radius:6px;font-size:1rem;">
+                    <option value="">-- Sélectionner --</option>
+                </select>
+            </div>
+            <div id="residentContent"></div>
+        </div>
     </div>
 
     <script>
@@ -397,6 +410,7 @@
                 .map(k => ({ resident: k, room: patientMap[k].room, soins: patientMap[k].soins }))
                 .sort((a, b) => getLastName(a.resident).localeCompare(getLastName(b.resident), 'fr'));
             displayResults(filtered.length, patients);
+            updateResidentDropdown();
 
             // Mettre à jour les données pour l'export
             window.exportData = { soins: filtered, heure_debut: currentHeureDebut, heure_fin: currentHeureFin };
@@ -487,6 +501,65 @@
             } catch (err) {
                 showError('Erreur lors du téléchargement: ' + err.message);
             }
+        });
+
+        // ── Vue par résident ──────────────────────────────────────────────────
+        function toLastFirst(name) {
+            const clean = name.replace(/^(Mme\/M\.|Mme|M\.)\s*/i, '').trim();
+            const parts = clean.split(' ');
+            const last = parts.pop().toUpperCase();
+            return `${last} ${parts.join(' ')}`.trim();
+        }
+
+        function updateResidentDropdown() {
+            const select = document.getElementById('residentSelect');
+            const prev = select.value;
+            select.innerHTML = '<option value="">-- Sélectionner --</option>';
+            const residents = [...new Set(allSoins.map(s => s.resident))];
+            residents
+                .map(r => ({ original: r, display: toLastFirst(r) }))
+                .sort((a, b) => a.display.localeCompare(b.display, 'fr'))
+                .forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.original;
+                    opt.textContent = r.display;
+                    select.appendChild(opt);
+                });
+            select.value = prev;
+            document.getElementById('residentSection').style.display = allSoins.length ? 'block' : 'none';
+        }
+
+        document.getElementById('residentSelect').addEventListener('change', function () {
+            const selected = this.value;
+            const content = document.getElementById('residentContent');
+            content.innerHTML = '';
+            if (!selected) return;
+
+            const soins = allSoins.filter(s => s.resident === selected);
+            if (!soins.length) { content.innerHTML = '<p>Aucune prescription trouvée.</p>'; return; }
+
+            // Grouper par catégorie
+            const catMap = {};
+            soins.forEach(s => {
+                const cat = s.category || 'Autres';
+                if (!catMap[cat]) catMap[cat] = [];
+                catMap[cat].push(s);
+            });
+
+            Object.entries(catMap).sort(([a], [b]) => a.localeCompare(b, 'fr')).forEach(([cat, items]) => {
+                const section = document.createElement('div');
+                section.style.marginBottom = '15px';
+                section.innerHTML = `<h4 style="color:#FF6B00;margin-bottom:8px;border-bottom:1px solid #FFE0B2;padding-bottom:4px;">${cat}</h4>`;
+                items.forEach(soin => {
+                    const heure = soin.heure ? soin.heure.replace(':', 'h') : '—';
+                    const dateStr = soin.date_debut ? ` <span style="color:#999;font-size:0.78rem;">depuis ${soin.date_debut}</span>` : '';
+                    const div = document.createElement('div');
+                    div.className = 'soin-item';
+                    div.innerHTML = `<span class="soin-heure">🕐 ${heure}</span><span class="soin-description">${soin.description}${dateStr}</span>`;
+                    section.appendChild(div);
+                });
+                content.appendChild(section);
+            });
         });
 
         function showLoading(show) { document.getElementById('loading').style.display = show ? 'block' : 'none'; }
