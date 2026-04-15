@@ -224,11 +224,18 @@ def extract_medication_care_acts(block: str, patient: str, room: str,
         else:
             drug_name = 'Médicament'
         desc = f"Traitement si besoin — {drug_name}"
+        # Vérifier si c'est une contention physique
+        block_norm = _normalize(block)
+        if any(kw in block_norm for kw in ['SANGLE', 'CONTENTION', 'BARRIERE', 'BARRIERES']):
+            cat_si_besoin = 'Contentions physiques'
+            desc = f"{drug_name} (si besoin)"
+        else:
+            cat_si_besoin = 'Traitements si besoin'
         if times:
             for t in times:
-                results.append({'resident': patient, 'room': room, 'heure': t, 'description': desc, 'category': 'Traitements si besoin'})
+                results.append({'resident': patient, 'room': room, 'heure': t, 'description': desc, 'category': cat_si_besoin})
         else:
-            results.append({'resident': patient, 'room': room, 'heure': None, 'description': desc, 'category': 'Traitements si besoin'})
+            results.append({'resident': patient, 'room': room, 'heure': None, 'description': desc, 'category': cat_si_besoin})
 
     return results
 
