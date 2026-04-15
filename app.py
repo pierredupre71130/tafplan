@@ -562,7 +562,15 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
             # Pour les compléments alimentaires, enrichir avec le nom du produit
             description = title_fr(act_name)
             act_upper = act_name.upper()
-            
+
+            # Normalisation de variantes de contentions physiques
+            if 'BARRIERES MISES EN PLACE' in act_upper or 'BARRIERES AU LIT' in act_upper or 'BARRIERE AU LIT' in act_upper:
+                description = 'Barrières au lit'
+            elif 'CONTENTIONS FAUTEUIL' in act_upper or 'CONTENTIONS FAUTEUIL' in act_upper:
+                description = 'Contentions fauteuil'
+            elif 'SANGLE VENTRALE' in act_upper:
+                description = 'Sangle ventrale'
+
             # Vérifier si c'est un complément alimentaire
             is_complement = 'COMPLEMENT' in act_upper
             if not is_complement:
@@ -1018,7 +1026,7 @@ def assign_care_categories(soins: list) -> list:
 
 
 def filter_soins(soins: list, categories: list, query: str, floor_filter: str) -> list:
-    q = (query or "").strip().lower()
+    q = _normalize((query or "").strip())
     filtered = []
     for soin in soins:
         if categories and soin.get("category") not in categories:
@@ -1030,9 +1038,9 @@ def filter_soins(soins: list, categories: list, query: str, floor_filter: str) -
             if get_room_number(soin.get('room', '0')) < 100:
                 continue
         if q:
-            searchable = (
+            searchable = _normalize(
                 f"{soin.get('resident','')} {soin.get('room','')} {soin.get('description','')} {soin.get('category','')}"
-            ).lower()
+            )
             if q not in searchable:
                 continue
         filtered.append(soin)
