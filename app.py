@@ -463,6 +463,25 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
             if not is_care_act(act_name):
                 continue
 
+            # Pour les compléments alimentaires, enrichir avec le nom du produit
+            description = title_fr(act_name)
+            act_upper = act_name.upper()
+            if 'COMPLEMENT' in act_upper:
+                # Chercher note médecin (ex: "clinutren", "fortimel")
+                note_m = re.search(r'Note m[eé]decin\s*:\s*(.{2,50})', block, re.IGNORECASE)
+                if note_m:
+                    produit = note_m.group(1).strip().rstrip('.,').title()
+                    description = f"Complément alimentaire ({produit})"
+                else:
+                    # Chercher un nom de produit connu dans le bloc
+                    PRODUITS = ['FORTIMEL', 'CALCIDOSE', 'OPTIFIBRE', 'CLINUTREN',
+                                'RENUTRYL', 'NUTRIDRINK', 'ENSURE', 'FRESUBIN',
+                                'CUBITAN', 'DIASIP', 'PROTEINE', 'FORTIFRESH']
+                    for prod in PRODUITS:
+                        if prod in block.upper():
+                            description = f"Complément alimentaire ({prod.title()})"
+                            break
+
             # Filtrer les heures dans la tranche demandée
             times_in_range = []
             for t_str in times_in_block:
@@ -486,7 +505,7 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                             'resident': patient,
                             'room': room,
                             'heure': t_str,
-                            'description': title_fr(act_name),
+                            'description': description,
                         })
             elif not times_in_block:
                 # Acte sans heure précisée : inclure une fois
@@ -497,7 +516,7 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
                         'resident': patient,
                         'room': room,
                         'heure': None,
-                        'description': title_fr(act_name),
+                        'description': description,
                     })
 
     doc.close()
