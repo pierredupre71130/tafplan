@@ -975,17 +975,9 @@ def render_soins_table(soins: list):
             description = s.get('description') or ''
             category = s.get('category') or ''
             cat_str = f"<span style='background:#FFF3E0;color:#FF6B00;font-size:0.72rem;font-weight:600;padding:1px 6px;border-radius:8px;margin-right:5px'>{category}</span>" if category else ''
-            lignes += f"""
-            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #FFF3E0;">
-                <span style="font-weight:700;color:#FF6B00;white-space:nowrap;min-width:48px">🕐 {heure_display}</span>
-                <span>{cat_str}{description}</span>
-            </div>"""
+            lignes += f"<div style='display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #FFF3E0;'><span style='font-weight:700;color:#FF6B00;white-space:nowrap;min-width:48px'>🕐 {heure_display}</span><span>{cat_str}{description}</span></div>"
 
-        cards_html += f"""
-        <div class="care-card">
-            <div class="care-card-resident" style="margin-bottom:8px">{room_str}👤 <strong>{resident}</strong></div>
-            {lignes}
-        </div>"""
+        cards_html += f"<div class='care-card'><div class='care-card-resident' style='margin-bottom:8px'>{room_str}👤 <strong>{resident}</strong></div>{lignes}</div>"
 
     st.markdown(cards_html, unsafe_allow_html=True)
 
@@ -1206,15 +1198,8 @@ def main():
                 lignes = ""
                 for m in data['meds']:
                     cat_badge = f"<span style='background:#FFF3E0;color:#FF6B00;font-size:0.72rem;font-weight:600;padding:1px 6px;border-radius:8px;margin-right:5px'>{m['category']}</span>"
-                    lignes += f"""
-                    <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #FFF3E0;">
-                        <span>{cat_badge}{m['drug']}</span>
-                    </div>"""
-                cards += f"""
-                <div class="care-card">
-                    <div class="care-card-resident" style="margin-bottom:8px">{room_str}👤 <strong>{resident}</strong></div>
-                    {lignes}
-                </div>"""
+                    lignes += f"<div style='display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #FFF3E0;'><span>{cat_badge}{m['drug']}</span></div>"
+                cards += f"<div class='care-card'><div class='care-card-resident' style='margin-bottom:8px'>{room_str}👤 <strong>{resident}</strong></div>{lignes}</div>"
             st.markdown(cards, unsafe_allow_html=True)
 
     # ════════════════════════════════════════════════════════════════════════════
