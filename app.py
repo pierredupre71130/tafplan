@@ -674,9 +674,10 @@ CATEGORY_RULES = [
     ("Hydratation", ["HYDRATATION", "BOISSON", "STIMULATION"]),
     ("Enseignement", ["ENSEIGNANT APA", "ENSEIGNANT"]),
     ("Compléments alimentaires", ["COMPLEMENT", "FORTIMEL", "CALCIDOSE", "OPTIFIBRE", "PROTEINE", "NUTRITION", "DIETETIQUE"]),
-    ("Demande d'examen", ["RADIO", "SCANNER", "IRM", "ECG", "ECHO", "PRELEVEMENT",
-                          "PRISE DE SANG", "ECBU", "BIOLOGIE", "ANALYSE", "EXAMEN",
-                          "HEMOCULTURE", "UROCULTURE", "BILAN COPRO", "BILAN SANGUIN"]),
+    ("Imagerie & ECG", ["RADIO", "SCANNER", "IRM", "ECG", "ECHO"]),
+    ("Prélèvements & Biologie", ["PRELEVEMENT", "PRISE DE SANG", "ECBU", "BIOLOGIE",
+                                  "ANALYSE", "EXAMEN", "HEMOCULTURE", "UROCULTURE",
+                                  "BILAN COPRO", "BILAN SANGUIN"]),
     ("Traitements si besoin", ["TRAITEMENT SI BESOIN"]),
 ]
 
