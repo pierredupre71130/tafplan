@@ -159,14 +159,15 @@ CARE_VERBS_PREFIX = [
     'ABLATION ', 'CHANGEMENT ', 'KINE ', 'BILAN ',
     'LEVER ', 'HYDRATATION ', 'STIMULATION ', 'ENSEIGNANT ',
     'PRISE EN CHARGE ', 'BARRIERES ', 'SANGLE ', 'CONTENTIONS ',
-    'COMPLEMENT ',
+    'COMPLEMENT ', 'RADIO', 'SCANNER', 'IRM', 'ECG', 'ECHO',
+    'PRELEVEMENT ', 'PRISE DE SANG', 'ECBU', 'ANALYSE ',
 ]
 
 # Mots-clés présents dans la ligne → acte infirmier
 CARE_KEYWORDS_CONTAINS = [
     'GLYCEMIE', 'DEXTRO', 'PANSEMENT', 'TENSION',
     'STOMIE', 'ESCARRE', 'OXYGENE', 'CONSTANTES', 'DIURESE',
-    'PESEE',
+    'PESEE', 'EXAMEN', 'BIOLOGIE', 'HEMOCULTURE', 'UROCULTURE',
 ]
 
 # Patterns à exclure (actes non souhaités)
@@ -673,6 +674,9 @@ CATEGORY_RULES = [
     ("Hydratation", ["HYDRATATION", "BOISSON", "STIMULATION"]),
     ("Enseignement", ["ENSEIGNANT APA", "ENSEIGNANT"]),
     ("Compléments alimentaires", ["COMPLEMENT", "FORTIMEL", "CALCIDOSE", "OPTIFIBRE", "PROTEINE", "NUTRITION", "DIETETIQUE"]),
+    ("Demande d'examen", ["RADIO", "SCANNER", "IRM", "ECG", "ECHO", "PRELEVEMENT",
+                          "PRISE DE SANG", "ECBU", "BIOLOGIE", "ANALYSE", "EXAMEN",
+                          "HEMOCULTURE", "UROCULTURE", "BILAN COPRO", "BILAN SANGUIN"]),
     ("Traitements si besoin", ["TRAITEMENT SI BESOIN"]),
 ]
 
