@@ -246,6 +246,10 @@ def extract_dietary_supplements(block: str, patient: str, room: str,
     ]
 
     for line in lines:
+        # Ignorer la ligne "Note médecin" elle-même pour éviter de créer une prescription séparée
+        if re.match(r'^\s*Note m[eé]decin\s*:', line, re.IGNORECASE):
+            continue
+
         line_upper = line.upper()
         for product in DIETARY_PRODUCTS:
             if product in line_upper:
@@ -303,6 +307,13 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
         for block in blocks[1:]:
             # Extraction collyres, injections SC, perfusions IV, traitements si besoin
             for act in extract_medication_care_acts(block, patient, room, heure_debut, heure_fin):
+                key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
+                if key not in seen:
+                    seen.add(key)
+                    results.append(act)
+
+            # Extraction compléments alimentaires (hors Note médecin pour éviter doublon)
+            for act in extract_dietary_supplements(block, patient, room, heure_debut, heure_fin):
                 key = (act['resident'], act['description'][:50].upper(), act.get('heure'))
                 if key not in seen:
                     seen.add(key)
