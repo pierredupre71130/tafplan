@@ -141,6 +141,16 @@ def _normalize(text: str) -> str:
         if unicodedata.category(c) != 'Mn'
     )
 
+# Lignes contenant UNIQUEMENT une forme galénique (à ignorer comme nom de médicament)
+_GALENIC_RE = re.compile(
+    r'^\s*(comprim[eé]s?|g[eé]lules?|sachets?|ampoules?|capsules?|gels?|sirop s?'
+    r'|pdr|cp\.?\s*(s[eé]c\.?)?|patchs?|sprays?|injectables?|solutions?'
+    r'|lyophilisats?|poudres?|buvables?|orodispers\w*|effervescents?'
+    r'|s[eé]cables?|orales?|sublinguales?|rectales?|cutan[eé]es?'
+    r'|voie\s+\w+|forme\s+\w+|filmé s?|enrob[eé]s?)\s*$',
+    re.I
+)
+
 def is_care_act(text: str) -> bool:
     u = text.upper().strip()
     if not u or len(u) < 5:
@@ -261,7 +271,8 @@ def extract_medication_care_acts(block: str, patient: str, room: str,
         lines = [l.strip() for l in block.split('\n') if l.strip()]
         drug_line = next(
             (l for l in lines if len(l) > 5 and not re.match(r'^\d', l)
-             and l not in ('c', 'g', 'h', 'j') and 'si besoin' not in l.lower()), None
+             and l not in ('c', 'g', 'h', 'j') and 'si besoin' not in l.lower()
+             and not _GALENIC_RE.match(l)), None
         )
         if drug_line:
             match = re.search(r'^(.+?)\s*\d+', drug_line.strip())
@@ -352,14 +363,21 @@ def extract_medication_types(block: str, patient: str, room: str,
             if _normalize(kw) in block_norm:
                 times = _times_in_range(block, heure_debut, heure_fin)
                 lines = [l.strip() for l in block.split('\n') if l.strip()]
+                # Chercher la ligne nom du médicament : éviter formes galéniques pures
                 drug_line = next(
-                    (l for l in lines if len(l) > 3 and not re.match(r'^\d', l)
-                     and l not in ('c', 'g', 'h', 'j')
-                     and not re.match(r'^Note\s', l, re.I)), None
+                    (l for l in lines
+                     if len(l) > 3
+                     and not re.match(r'^\d', l)
+                     and l.strip() not in ('c', 'g', 'h', 'j')
+                     and not re.match(r'^Note[\s:]', l, re.I)
+                     and not _GALENIC_RE.match(l)
+                     ), None
                 )
-                if not drug_line:
-                    break
-                desc = drug_line[:60].strip().title()
+                if drug_line:
+                    desc = drug_line[:60].strip().title()
+                else:
+                    # Fallback : utiliser le nom du médicament qui a déclenché la détection
+                    desc = kw.title()
                 if times:
                     for t in times:
                         results.append({'resident': patient, 'room': room, 'heure': t,
