@@ -15,7 +15,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, KeepTogether
 import os
 import unicodedata
 from collections import OrderedDict
@@ -128,6 +128,37 @@ MEDICATION_CATEGORY_RULES = [
         "INDAPAMIDE", "FLUDEX", "HYDROCHLOROTHIAZIDE", "BUMETANIDE", "DIURETIQUE",
     ]),
 ]
+
+# Couleur par catégorie (pour PDF)
+CATEGORY_COLORS = {
+    'Imagerie & ECG':             '#1565C0',
+    'Prélèvements & Biologie':    '#00796B',
+    'Collyre':                    '#0288D1',
+    'Injection / SC':             '#2E7D32',
+    'Perfusion / IV':             '#1B5E20',
+    'Surveillance':               '#558B2F',
+    'Évaluation':                 '#F57F17',
+    'Psychologue':                '#6A1B9A',
+    'Aide à la prise':            '#E64A19',
+    'Pose / Ablation':            '#4E342E',
+    'Soins locaux':               '#AD1457',
+    'Kinésithérapie':             '#7B1FA2',
+    'Contentions':                '#EF6C00',
+    'Contentions physiques':      '#B71C1C',
+    'Ergothérapie':               '#37474F',
+    'Lever':                      '#546E7A',
+    'Hydratation':                '#00838F',
+    'Enseignement':               '#455A64',
+    'Compléments alimentaires':   '#33691E',
+    'Traitements si besoin':      '#E65100',
+    'Antalgiques':                '#BF360C',
+    'Psychotropes':               '#4A148C',
+    'Traitements cardiaques':     '#C62828',
+    'Traitements diabétiques':    '#1B5E20',
+    'Traitements anticoagulants': '#880E4F',
+    'Traitements diurétiques':    '#006064',
+}
+_CAT_COLOR_DEFAULT = '#546E7A'
 
 # ═══════════════════════════════════════════════════════════════════════════
 # UTILITAIRES
@@ -665,57 +696,198 @@ def format_heure(heure_str) -> str:
         return '—'
     return str(heure_str).replace(':', 'h')
 
-def generate_pdf(soins: list, heure_debut: str, heure_fin: str, date_str: str) -> bytes:
-    """Générer PDF d'export"""
+def generate_pdf(soins: list, heure_debut: str, heure_fin: str, date_str: str,
+                 floor_label: str = 'Tous les étages') -> bytes:
+    """Générer PDF d'export amélioré : groupé par catégorie avec codes couleurs."""
     buffer = io.BytesIO()
+
+    # Numérotation des pages
+    def _footer(canvas, doc):
+        canvas.saveState()
+        canvas.setFont('Helvetica', 7)
+        canvas.setFillColor(colors.HexColor('#90A4AE'))
+        canvas.drawRightString(
+            A4[0] - 1.8 * cm, 1.1 * cm,
+            f"Page {doc.page}  •  TAFPLAN — généré le {date_str}"
+        )
+        canvas.restoreState()
+
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
-        rightMargin=2 * cm, leftMargin=2 * cm,
-        topMargin=2 * cm, bottomMargin=2 * cm,
+        rightMargin=1.8 * cm, leftMargin=1.8 * cm,
+        topMargin=1.8 * cm, bottomMargin=2.2 * cm,
         title="TAFPLAN — Planning des soins",
     )
 
-    orange = colors.HexColor("#FF6B00")
-    light_orange = colors.HexColor("#FFF3E0")
-    dark_gray = colors.HexColor("#1A1A1A")
+    # Largeur utile
+    CW = A4[0] - 3.6 * cm   # ≈ 17.4 cm
+    COL_W = [1.6 * cm, 4.8 * cm, CW - 1.6*cm - 4.8*cm - 1.5*cm, 1.5 * cm]
 
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        "TitleStyle", parent=styles["Title"],
-        textColor=orange, fontSize=22, spaceAfter=4, fontName="Helvetica-Bold",
-    )
+    # ── Styles ──────────────────────────────────────────────────────────────
+    orange      = colors.HexColor('#FF6B00')
+    light_bg    = colors.HexColor('#FFF3E0')
+    col_hdr_bg  = colors.HexColor('#ECEFF1')
+    text_dark   = colors.HexColor('#1A1A1A')
+    text_mid    = colors.HexColor('#546E7A')
+    text_light  = colors.HexColor('#90A4AE')
+
+    def _ps(name, size, bold=False, color=None, align=0, leading=None):
+        return ParagraphStyle(name, fontSize=size,
+                              fontName='Helvetica-Bold' if bold else 'Helvetica',
+                              textColor=color or text_dark,
+                              alignment=align,
+                              leading=leading or size * 1.3)
+
+    sty_title   = _ps('t1', 22, bold=True, color=orange)
+    sty_sub     = _ps('t2', 10, color=text_mid)
+    sty_cat_hdr = _ps('ch', 10, bold=True, color=colors.white)
+    sty_cat_cnt = _ps('cc',  9, color=colors.white, align=2)
+    sty_col_hdr = _ps('th',  8, bold=True)
+    sty_cell    = _ps('td',  8, leading=10)
+    sty_small   = _ps('ts', 6.5, color=text_light, leading=8)
+    sty_stat_n  = _ps('sn', 7.5, leading=10)
+    sty_stat_nb = _ps('sb', 7.5, bold=True, align=2, leading=10)
+
+    # ── Grouper par catégorie, trier par chambre ─────────────────────────────
+    cat_map = OrderedDict()
+    for s in soins:
+        cat_map.setdefault(s.get('category', 'Autres'), []).append(s)
+
+    def _rnum(s):
+        return int(re.sub(r'^[A-Za-z]+', '', s.get('room', '') or '0') or 0)
+
+    for cat in cat_map:
+        cat_map[cat].sort(key=_rnum)
 
     elements = []
-    elements.append(Paragraph("TAFPLAN — Planning des soins", title_style))
-    elements.append(Spacer(1, 0.5 * cm))
-    elements.append(Paragraph(f"<b>Tranche horaire :</b> {heure_debut} — {heure_fin}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Généré le :</b> {date_str}", styles["Normal"]))
-    elements.append(Spacer(1, 1 * cm))
 
-    # Tableau
-    data = [["Heure", "Résident", "Chambre", "Acte"]]
-    for s in soins:
-        data.append([
-            format_heure(s.get('heure')),
-            s.get('resident', ''),
-            s.get('room', ''),
-            s.get('description', ''),
-        ])
+    # ── En-tête ──────────────────────────────────────────────────────────────
+    elements.append(Paragraph("TAFPLAN", sty_title))
+    elements.append(Paragraph(
+        f"Planning des soins EHPAD  •  {heure_debut} – {heure_fin}  •  {floor_label}",
+        sty_sub))
+    elements.append(Spacer(1, 0.35 * cm))
 
-    table = Table(data)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), orange),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 11),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), light_orange),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    # Bandeau total
+    total_bar = Table(
+        [[Paragraph(
+            f"<b>{len(soins)} soin(s)</b> au total  •  <b>{len(cat_map)}</b> catégorie(s)",
+            _ps('tb', 9, color=text_mid))]],
+        colWidths=[CW])
+    total_bar.setStyle(TableStyle([
+        ('BACKGROUND',    (0,0), (-1,-1), light_bg),
+        ('TOPPADDING',    (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('LEFTPADDING',   (0,0), (-1,-1), 10),
     ]))
+    elements.append(total_bar)
+    elements.append(Spacer(1, 0.4 * cm))
 
-    elements.append(table)
-    doc.build(elements)
+    # ── Tableau récapitulatif (3 catégories par ligne) ───────────────────────
+    NCOLS = 3
+    gw    = 0.25 * cm
+    pw    = (CW - gw * (NCOLS - 1)) / NCOLS
+    nw    = pw - 1.1 * cm
+    nbw   = 1.1 * cm
+    # colWidths : name, nb, gap, name, nb, gap, name, nb  (8 cols)
+    stat_cw = []
+    for i in range(NCOLS):
+        stat_cw += [nw, nbw]
+        if i < NCOLS - 1:
+            stat_cw.append(gw)
+
+    cats_list = list(cat_map.items())
+    stat_rows = []
+    for i in range(0, len(cats_list), NCOLS):
+        row = []
+        for j in range(NCOLS):
+            if i + j < len(cats_list):
+                cat, items = cats_list[i + j]
+                c_hex = CATEGORY_COLORS.get(cat, _CAT_COLOR_DEFAULT)
+                row.append(Paragraph(
+                    f"<font color='{c_hex}'>●</font>  {cat}", sty_stat_n))
+                row.append(Paragraph(str(len(items)), sty_stat_nb))
+            else:
+                row += ['', '']
+            if j < NCOLS - 1:
+                row.append('')
+        stat_rows.append(row)
+
+    stat_table = Table(stat_rows, colWidths=stat_cw)
+    st_cmds = [
+        ('VALIGN',        (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING',    (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('LEFTPADDING',   (0,0), (-1,-1), 4),
+        ('RIGHTPADDING',  (0,0), (-1,-1), 4),
+    ]
+    for ri in range(len(stat_rows)):
+        bg = colors.HexColor('#F5F5F5') if ri % 2 else colors.white
+        st_cmds.append(('BACKGROUND', (0, ri), (-1, ri), bg))
+    stat_table.setStyle(TableStyle(st_cmds))
+    elements.append(stat_table)
+    elements.append(Spacer(1, 0.6 * cm))
+
+    # ── Section par catégorie ────────────────────────────────────────────────
+    for cat, items in cat_map.items():
+        c_color = colors.HexColor(CATEGORY_COLORS.get(cat, _CAT_COLOR_DEFAULT))
+
+        # Bandeau de catégorie
+        hdr_table = Table(
+            [[Paragraph(cat, sty_cat_hdr),
+              Paragraph(f"{len(items)} soin(s)", sty_cat_cnt)]],
+            colWidths=[CW - 2.2 * cm, 2.2 * cm])
+        hdr_table.setStyle(TableStyle([
+            ('BACKGROUND',    (0,0), (-1,-1), c_color),
+            ('TOPPADDING',    (0,0), (-1,-1), 6),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ('LEFTPADDING',   (0,0), (0,0),   10),
+            ('RIGHTPADDING',  (-1,0), (-1,-1), 8),
+            ('VALIGN',        (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+
+        # Tableau de soins
+        tdata = [[
+            Paragraph('Ch.', sty_col_hdr),
+            Paragraph('Résident', sty_col_hdr),
+            Paragraph('Acte de soins', sty_col_hdr),
+            Paragraph('Heure', sty_col_hdr),
+        ]]
+        for s in items:
+            date_d = s.get('date_debut')
+            desc   = s.get('description') or '—'
+            desc_html = f"{desc}<br/><font size='6.5' color='#90A4AE'>depuis {date_d}</font>" \
+                        if date_d else desc
+            tdata.append([
+                Paragraph(s.get('room') or '—',     sty_cell),
+                Paragraph(s.get('resident') or '—', sty_cell),
+                Paragraph(desc_html, sty_cell),
+                Paragraph(format_heure(s.get('heure')), sty_cell),
+            ])
+
+        ts = [
+            ('BACKGROUND',    (0,0), (-1,0), col_hdr_bg),
+            ('TOPPADDING',    (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('LEFTPADDING',   (0,0), (-1,-1), 5),
+            ('RIGHTPADDING',  (0,0), (-1,-1), 5),
+            ('VALIGN',        (0,0), (-1,-1), 'TOP'),
+            ('LINEBELOW',     (0,0), (-1,0), 0.5, colors.HexColor('#CFD8DC')),
+            ('GRID',          (0,0), (-1,-1), 0.3, colors.HexColor('#ECEFF1')),
+            # Barre gauche couleur catégorie
+            ('LINEAFTER',     (0,0), (0,-1), 2.0, c_color),
+        ]
+        for ri in range(1, len(tdata)):
+            bg = colors.white if ri % 2 == 1 else colors.HexColor('#F8F9FA')
+            ts.append(('BACKGROUND', (0, ri), (-1, ri), bg))
+
+        data_table = Table(tdata, colWidths=COL_W)
+        data_table.setStyle(TableStyle(ts))
+
+        elements.append(KeepTogether([hdr_table, data_table]))
+        elements.append(Spacer(1, 0.55 * cm))
+
+    doc.build(elements, onFirstPage=_footer, onLaterPages=_footer)
     buffer.seek(0)
     return buffer.getvalue()
 
@@ -771,11 +943,13 @@ def export_pdf():
     try:
         data = request.json
         soins = data.get('soins', [])
-        heure_debut = data.get('heure_debut', '')
-        heure_fin = data.get('heure_fin', '')
+        heure_debut  = data.get('heure_debut', '')
+        heure_fin    = data.get('heure_fin', '')
+        floor_label  = data.get('floor_label', 'Tous les étages')
 
         pdf_bytes = generate_pdf(soins, heure_debut, heure_fin,
-                                 __import__('datetime').datetime.now().strftime("%d/%m/%Y à %Hh%M"))
+                                 __import__('datetime').datetime.now().strftime("%d/%m/%Y à %Hh%M"),
+                                 floor_label=floor_label)
 
         return send_file(
             io.BytesIO(pdf_bytes),

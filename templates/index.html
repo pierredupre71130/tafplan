@@ -647,7 +647,13 @@
             updateResidentDropdown();
             updateFilterBadge();
 
-            window.exportData = { soins: filtered, heure_debut: currentHeureDebut, heure_fin: currentHeureFin };
+            const floorLabels = { all: 'Tous les étages', rdc: 'RDC (chambres 1–32)', '1er': '1er Étage (chambres 101–132)' };
+            window.exportData = {
+                soins: filtered,
+                heure_debut: currentHeureDebut,
+                heure_fin: currentHeureFin,
+                floor_label: floorLabels[currentFloor] || 'Tous les étages',
+            };
         }
 
         // Re-filtrer à chaque changement de checkbox
