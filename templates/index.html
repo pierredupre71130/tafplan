@@ -94,6 +94,28 @@
         .btn-secondary { background-color: #f0f0f0; color: #333; }
         .btn-secondary:hover { background-color: #e0e0e0; }
 
+        /* ─── Sélecteur d'étage ─── */
+        .floor-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 2px;
+        }
+        .floor-btn {
+            flex: 1;
+            padding: 9px 10px;
+            border: 2px solid #FF6B00;
+            border-radius: 22px;
+            background: white;
+            color: #FF6B00;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.18s;
+            letter-spacing: 0.3px;
+        }
+        .floor-btn:hover:not(.active) { background: #FFF3E0; }
+        .floor-btn.active { background: #FF6B00; color: white; }
+
         .loading { display: none; text-align: center; padding: 30px; }
 
         .spinner {
@@ -424,6 +446,15 @@
                     </div>
                 </div>
 
+                <div class="form-group" style="margin-top:6px;">
+                    <label>🏢 Étage</label>
+                    <div class="floor-group">
+                        <button type="button" class="floor-btn active" data-floor="all">Tout</button>
+                        <button type="button" class="floor-btn" data-floor="rdc">RDC &nbsp;<small style="font-weight:400;opacity:.75;">(ch. 1–32)</small></button>
+                        <button type="button" class="floor-btn" data-floor="1er">1ER ÉTAGE &nbsp;<small style="font-weight:400;opacity:.75;">(ch. 101–132)</small></button>
+                    </div>
+                </div>
+
                 <div class="button-group">
                     <button type="submit" class="btn-primary" id="analyzeBtn">🔍 Analyser</button>
                     <button type="reset" class="btn-secondary">↻ Réinitialiser</button>
@@ -548,6 +579,26 @@
             }
         }
 
+        // ── Sélecteur d'étage ─────────────────────────────────────────────────
+        let currentFloor = 'all';
+
+        function getFloor(room) {
+            const num = parseInt((room || '').replace(/^[A-Za-z]+/, ''));
+            if (isNaN(num)) return null;
+            if (num >= 1   && num <= 32)  return 'rdc';
+            if (num >= 101 && num <= 132) return '1er';
+            return null;
+        }
+
+        document.querySelectorAll('.floor-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.floor-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFloor = btn.dataset.floor;
+                applyFilters();
+            });
+        });
+
         // ── Données ────────────────────────────────────────────────────────────
         let allSoins = [];
         let currentHeureDebut = '';
@@ -560,11 +611,16 @@
             const selected = [];
             document.querySelectorAll('input[name="categories"]:checked').forEach(cb => selected.push(cb.value));
 
-            const filtered = selected.length > 0
+            let filtered = selected.length > 0
                 ? allSoins.filter(s => selected.includes(s.category))
-                : allSoins;
+                : allSoins.slice();
 
-            // Grouper par patient, tri alphabétique par nom de famille
+            // Filtre par étage
+            if (currentFloor !== 'all') {
+                filtered = filtered.filter(s => getFloor(s.room) === currentFloor);
+            }
+
+            // Grouper par patient
             const patientMap = {};
             const patientOrder = [];
             filtered.forEach(s => {
@@ -574,9 +630,18 @@
             });
 
             const getLastName = name => name.replace(/^(Mme\/M\.|Mme|M\.)\s*/i, '').trim().split(' ').pop().toLowerCase();
+            const getRoomNum  = room  => parseInt((room || '').replace(/^[A-Za-z]+/, '')) || 9999;
+
             const patients = patientOrder
                 .map(k => ({ resident: k, room: patientMap[k].room, soins: patientMap[k].soins }))
-                .sort((a, b) => getLastName(a.resident).localeCompare(getLastName(b.resident), 'fr'));
+                .sort((a, b) => {
+                    if (currentFloor !== 'all') {
+                        // Tri par numéro de chambre croissant
+                        return getRoomNum(a.room) - getRoomNum(b.room);
+                    }
+                    // Tri alphabétique par nom de famille
+                    return getLastName(a.resident).localeCompare(getLastName(b.resident), 'fr');
+                });
 
             displayResults(filtered.length, patients);
             updateResidentDropdown();
