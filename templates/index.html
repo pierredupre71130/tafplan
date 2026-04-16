@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TAFPLAN — Planning des soins</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -21,160 +17,94 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 20px 20px 20px 44px;
         }
 
         header {
             background-color: #FF6B00;
             color: white;
-            padding: 30px;
+            padding: 24px 30px;
             border-radius: 8px;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
             text-align: center;
         }
 
-        header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        header p {
-            font-size: 1.1rem;
-            opacity: 0.95;
-        }
+        header h1 { font-size: 2.2rem; margin-bottom: 6px; }
+        header p  { font-size: 1rem; opacity: 0.95; }
 
         .form-section {
             background: white;
-            padding: 25px;
+            padding: 22px 25px;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
+        .form-group { margin-bottom: 18px; }
 
         label {
             display: block;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 7px;
             color: #1a1a1a;
         }
 
         input[type="file"],
         input[type="time"] {
             width: 100%;
-            padding: 12px;
+            padding: 11px;
             border: 2px solid #ddd;
             border-radius: 6px;
             font-size: 1rem;
         }
 
         input[type="file"]:focus,
-        input[type="time"]:focus {
-            outline: none;
-            border-color: #FF6B00;
-        }
+        input[type="time"]:focus { outline: none; border-color: #FF6B00; }
 
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .categories-section {
-            margin-top: 30px;
-        }
-
-        .categories-section h3 {
-            margin-bottom: 15px;
-            color: #FF6B00;
-        }
-
-        .categories-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-        }
-
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            font-weight: normal;
-            cursor: pointer;
-        }
-
-        .checkbox-label input[type="checkbox"] {
-            margin-right: 10px;
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            accent-color: #FF6B00;
+            gap: 18px;
         }
 
         .button-group {
             display: flex;
-            gap: 15px;
-            margin-top: 25px;
+            gap: 12px;
+            margin-top: 20px;
         }
 
         button {
-            padding: 14px 28px;
-            font-size: 1.1rem;
+            padding: 13px 26px;
+            font-size: 1rem;
             font-weight: 600;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
         }
 
-        .btn-primary {
-            background-color: #FF6B00;
-            color: white;
-            flex: 1;
-        }
-
+        .btn-primary { background-color: #FF6B00; color: white; flex: 1; }
         .btn-primary:hover:not(:disabled) {
             background-color: #E55A00;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255,107,0,0.3);
         }
+        .btn-primary:disabled { background-color: #FFBB80; cursor: not-allowed; }
 
-        .btn-primary:disabled {
-            background-color: #FFBB80;
-            cursor: not-allowed;
-        }
+        .btn-secondary { background-color: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background-color: #e0e0e0; }
 
-        .btn-secondary {
-            background-color: #f0f0f0;
-            color: #333;
-        }
-
-        .btn-secondary:hover {
-            background-color: #e0e0e0;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 30px;
-        }
+        .loading { display: none; text-align: center; padding: 30px; }
 
         .spinner {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #FF6B00;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 40px; height: 40px;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
 
         .results-section {
             display: none;
@@ -182,26 +112,24 @@
             padding: 25px;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .results-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
+            margin-bottom: 22px;
+            padding-bottom: 14px;
             border-bottom: 2px solid #FF6B00;
         }
 
-        .results-header h2 {
-            color: #FF6B00;
-        }
+        .results-header h2 { color: #FF6B00; }
 
         .badge {
             background-color: #FF6B00;
             color: white;
-            padding: 6px 12px;
+            padding: 5px 12px;
             border-radius: 20px;
             font-weight: 600;
             font-size: 0.9rem;
@@ -210,34 +138,31 @@
         .patient-card {
             background-color: #FFF8F3;
             border-left: 4px solid #FF6B00;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 18px 20px;
+            margin-bottom: 18px;
             border-radius: 6px;
         }
 
         .patient-header {
             font-weight: 600;
-            font-size: 1.1rem;
-            margin-bottom: 15px;
+            font-size: 1.05rem;
+            margin-bottom: 12px;
             color: #1a1a1a;
         }
 
         .soin-item {
             display: flex;
-            gap: 15px;
-            padding: 10px 0;
+            gap: 12px;
+            padding: 9px 0;
             border-bottom: 1px solid #FFE0B2;
         }
-
-        .soin-item:last-child {
-            border-bottom: none;
-        }
+        .soin-item:last-child { border-bottom: none; }
 
         .soin-date {
             display: inline-block;
             color: #999;
-            font-size: 0.78rem;
-            margin-left: 8px;
+            font-size: 0.76rem;
+            margin-left: 7px;
         }
 
         .soin-heure {
@@ -251,25 +176,17 @@
             display: inline-block;
             background-color: #FFF3E0;
             color: #FF6B00;
-            font-size: 0.75rem;
+            font-size: 0.73rem;
             font-weight: 600;
-            padding: 2px 8px;
+            padding: 2px 7px;
             border-radius: 8px;
-            margin-right: 8px;
+            margin-right: 7px;
         }
 
-        .soin-description {
-            flex: 1;
-        }
+        .soin-description { flex: 1; }
 
-        .btn-export {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        .btn-export:hover {
-            background-color: #45a049;
-        }
+        .btn-export { background-color: #4CAF50; color: white; }
+        .btn-export:hover { background-color: #45a049; }
 
         .error {
             background-color: #f8d7da;
@@ -280,26 +197,209 @@
             display: none;
         }
 
+        /* ═══════════════════════════════════════════════════
+           SIDEBAR FILTRES — panneau latéral rétractable
+           ═══════════════════════════════════════════════════ */
+
+        .filter-sidebar {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+        }
+
+        /* L'onglet toujours visible */
+        .filter-tab {
+            background: #FF6B00;
+            color: white;
+            width: 26px;
+            padding: 28px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+            user-select: none;
+            transition: background 0.2s, width 0.3s, border-radius 0.3s;
+        }
+
+        .filter-tab:hover { background: #E55A00; }
+
+        .filter-sidebar.open .filter-tab {
+            background: #CC5200;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .filter-tab-arrow {
+            font-size: 0.6rem;
+            transition: transform 0.3s;
+        }
+
+        .filter-sidebar.open .filter-tab-arrow {
+            transform: rotate(180deg);
+        }
+
+        .filter-tab-label {
+            writing-mode: vertical-lr;
+            font-weight: 700;
+            font-size: 0.7rem;
+            letter-spacing: 2.5px;
+        }
+
+        .filter-count-badge {
+            background: white;
+            color: #FF6B00;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 0.6rem;
+            font-weight: 900;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        /* Le panneau qui se déploie */
+        .filter-panel {
+            width: 0;
+            overflow: hidden;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: white;
+        }
+
+        .filter-sidebar.open .filter-panel {
+            width: 265px;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+        }
+
+        .filter-panel-inner {
+            width: 265px;
+            padding: 16px;
+            max-height: 88vh;
+            overflow-y: auto;
+        }
+
+        /* Scrollbar discrète */
+        .filter-panel-inner::-webkit-scrollbar { width: 4px; }
+        .filter-panel-inner::-webkit-scrollbar-track { background: #f1f1f1; }
+        .filter-panel-inner::-webkit-scrollbar-thumb { background: #FFBB80; border-radius: 2px; }
+
+        .filter-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #FF6B00;
+        }
+
+        .filter-panel-header h3 { color: #FF6B00; font-size: 0.95rem; }
+
+        .filter-shortcut-group { display: flex; gap: 5px; }
+
+        .filter-shortcut-btn {
+            padding: 3px 8px;
+            font-size: 0.7rem;
+            border: 1px solid #FF6B00;
+            border-radius: 4px;
+            cursor: pointer;
+            background: transparent;
+            color: #FF6B00;
+            font-weight: 600;
+            transition: all 0.15s;
+        }
+        .filter-shortcut-btn:hover { background: #FF6B00; color: white; }
+
+        .filter-separator {
+            border: none;
+            border-top: 1px dashed #FFD0A0;
+            margin: 8px 0;
+        }
+
+        .filter-group-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #aaa;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin: 10px 0 4px 6px;
+        }
+
+        .categories-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 5px 6px;
+            border-radius: 5px;
+            transition: background 0.12s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .checkbox-label:hover { background: #FFF3E0; }
+
+        .checkbox-label input[type="checkbox"] {
+            margin-right: 8px;
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            accent-color: #FF6B00;
+            flex-shrink: 0;
+        }
+
+        /* ═══════════════════════════════════════════════════ */
+
         @media (max-width: 768px) {
-            header h1 {
-                font-size: 1.8rem;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .categories-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .button-group {
-                flex-direction: column;
-            }
+            header h1 { font-size: 1.7rem; }
+            .form-row { grid-template-columns: 1fr; }
+            .button-group { flex-direction: column; }
+            .container { padding-left: 38px; }
         }
     </style>
 </head>
 <body>
+
+    <!-- ═══ SIDEBAR FILTRES ═══ -->
+    <div class="filter-sidebar" id="filterSidebar">
+        <div class="filter-tab" id="filterTab">
+            <span class="filter-tab-arrow">▶</span>
+            <span class="filter-tab-label">FILTRES</span>
+            <span class="filter-count-badge" id="filterCountBadge"></span>
+        </div>
+        <div class="filter-panel">
+            <div class="filter-panel-inner">
+                <div class="filter-panel-header">
+                    <h3>🏷️ Catégories</h3>
+                    <div class="filter-shortcut-group">
+                        <button class="filter-shortcut-btn" id="selectAllBtn">Tout</button>
+                        <button class="filter-shortcut-btn" id="deselectAllBtn">Aucun</button>
+                    </div>
+                </div>
+                <div class="categories-grid" id="categoriesGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ CONTENU PRINCIPAL ═══ -->
     <div class="container">
         <header>
             <h1>🏥 TAFPLAN</h1>
@@ -324,16 +424,8 @@
                     </div>
                 </div>
 
-                <div class="categories-section">
-                    <h3>🏷️ Catégories à afficher</h3>
-                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
-                        ✓ Cochez les catégories que vous voulez voir
-                    </p>
-                    <div class="categories-grid" id="categoriesGrid"></div>
-                </div>
-
                 <div class="button-group">
-                    <button type="submit" class="btn-primary">🔍 Analyser</button>
+                    <button type="submit" class="btn-primary" id="analyzeBtn">🔍 Analyser</button>
                     <button type="reset" class="btn-secondary">↻ Réinitialiser</button>
                 </div>
             </form>
@@ -343,7 +435,7 @@
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Analyse en cours...</p>
+            <p>Analyse en cours…</p>
         </div>
 
         <div class="results-section" id="resultsSection">
@@ -351,19 +443,19 @@
                 <h2>Résultats</h2>
                 <div>
                     <span class="badge" id="resultCount">0 soin(s)</span>
-                    <button type="button" class="btn-export" id="exportBtn" style="margin-left: 15px;">⬇️ Télécharger PDF</button>
+                    <button type="button" class="btn-export" id="exportBtn" style="margin-left: 12px;">⬇️ Télécharger PDF</button>
                 </div>
             </div>
             <div id="resultsContent"></div>
         </div>
 
-        <div class="results-section" id="residentSection" style="display:none; background-color:#F5F5F5; border-left:5px solid #FF6B00;">
+        <div class="results-section" id="residentSection" style="display:none; background-color:#F9F9F9; border-left:5px solid #FF6B00;">
             <div class="results-header">
-                <h2>👤 Prescriptions complètes par résident</h2>
+                <h2>👤 Prescriptions par résident</h2>
             </div>
             <div class="form-group" style="margin-bottom:20px;">
                 <label for="residentSelect">Choisir un résident</label>
-                <select id="residentSelect" style="width:100%;padding:12px;border:2px solid #ddd;border-radius:6px;font-size:1rem;">
+                <select id="residentSelect" style="width:100%;padding:11px;border:2px solid #ddd;border-radius:6px;font-size:1rem;">
                     <option value="">-- Sélectionner --</option>
                 </select>
             </div>
@@ -374,30 +466,105 @@
     <script>
         const categories = {{ categories | tojson }};
 
-        // Stockage des soins après extraction — pas de re-upload pour filtrer
-        let allSoins = [];
-        let currentHeureDebut = '';
-        let currentHeureFin = '';
+        // Catégories médicament pour séparateur visuel
+        const MED_CATS = new Set([
+            'Antalgiques', 'Compléments alimentaires', 'Perfusion / IV',
+            'Psychotropes', 'Traitements anticoagulants', 'Traitements cardiaques',
+            'Traitements diabétiques', 'Traitements diurétiques', 'Traitements si besoin',
+            'Injection / SC', 'Collyre'
+        ]);
 
-        // Remplir les checkboxes
+        // ── Génération des checkboxes dans la sidebar ──────────────────────────
         const grid = document.getElementById('categoriesGrid');
+        let lastWasMed = null;
+
         categories.forEach(cat => {
+            const isMed = MED_CATS.has(cat);
+
+            // Séparateur entre actes de soins et médicaments/traitements
+            if (lastWasMed === false && isMed) {
+                const sep = document.createElement('hr');
+                sep.className = 'filter-separator';
+                grid.appendChild(sep);
+
+                const lbl = document.createElement('div');
+                lbl.className = 'filter-group-label';
+                lbl.textContent = 'Médicaments & Traitements';
+                grid.appendChild(lbl);
+            } else if (lastWasMed === null && !isMed) {
+                const lbl = document.createElement('div');
+                lbl.className = 'filter-group-label';
+                lbl.textContent = 'Actes de soins';
+                grid.appendChild(lbl);
+            }
+
+            lastWasMed = isMed;
+
             const label = document.createElement('label');
             label.className = 'checkbox-label';
             label.innerHTML = `<input type="checkbox" name="categories" value="${cat}"><span>${cat}</span>`;
             grid.appendChild(label);
         });
 
-        // Filtrage client-side — appelé après upload ET à chaque changement de checkbox
+        // ── Sidebar hover / clic ───────────────────────────────────────────────
+        const sidebar = document.getElementById('filterSidebar');
+        const filterTab = document.getElementById('filterTab');
+        let closeTimeout;
+
+        sidebar.addEventListener('mouseenter', () => {
+            clearTimeout(closeTimeout);
+            sidebar.classList.add('open');
+        });
+
+        sidebar.addEventListener('mouseleave', () => {
+            closeTimeout = setTimeout(() => sidebar.classList.remove('open'), 350);
+        });
+
+        // Clic sur l'onglet = épingler/dépingler
+        filterTab.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            clearTimeout(closeTimeout);
+        });
+
+        // Tout / Aucun
+        document.getElementById('selectAllBtn').addEventListener('click', () => {
+            document.querySelectorAll('#categoriesGrid input[type="checkbox"]').forEach(cb => cb.checked = true);
+            applyFilters();
+        });
+
+        document.getElementById('deselectAllBtn').addEventListener('click', () => {
+            document.querySelectorAll('#categoriesGrid input[type="checkbox"]').forEach(cb => cb.checked = false);
+            applyFilters();
+        });
+
+        function updateFilterBadge() {
+            const count = document.querySelectorAll('#categoriesGrid input[type="checkbox"]:checked').length;
+            const badge = document.getElementById('filterCountBadge');
+            if (count > 0 && count < categories.length) {
+                badge.textContent = count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // ── Données ────────────────────────────────────────────────────────────
+        let allSoins = [];
+        let currentHeureDebut = '';
+        let currentHeureFin = '';
+
+        // ── Filtrage côté client ───────────────────────────────────────────────
         function applyFilters() {
             if (!allSoins.length) return;
 
             const selected = [];
             document.querySelectorAll('input[name="categories"]:checked').forEach(cb => selected.push(cb.value));
 
-            const filtered = selected.length > 0 ? allSoins.filter(s => selected.includes(s.category)) : allSoins;
+            const filtered = selected.length > 0
+                ? allSoins.filter(s => selected.includes(s.category))
+                : allSoins;
 
-            // Grouper par patient
+            // Grouper par patient, tri alphabétique par nom de famille
             const patientMap = {};
             const patientOrder = [];
             filtered.forEach(s => {
@@ -410,17 +577,18 @@
             const patients = patientOrder
                 .map(k => ({ resident: k, room: patientMap[k].room, soins: patientMap[k].soins }))
                 .sort((a, b) => getLastName(a.resident).localeCompare(getLastName(b.resident), 'fr'));
+
             displayResults(filtered.length, patients);
             updateResidentDropdown();
+            updateFilterBadge();
 
-            // Mettre à jour les données pour l'export
             window.exportData = { soins: filtered, heure_debut: currentHeureDebut, heure_fin: currentHeureFin };
         }
 
-        // Re-filtrer à chaque changement de checkbox (sans re-uploader le PDF)
+        // Re-filtrer à chaque changement de checkbox
         document.getElementById('categoriesGrid').addEventListener('change', applyFilters);
 
-        // Form submit — upload PDF et extraction (une seule fois par PDF/tranche)
+        // ── Soumission du formulaire ───────────────────────────────────────────
         document.getElementById('analysisForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -445,12 +613,13 @@
                     showError(data.error || "Erreur lors de l'analyse");
                 }
             } catch (err) {
-                showError('Erreur: ' + err.message);
+                showError('Erreur : ' + err.message);
             } finally {
                 showLoading(false);
             }
         });
 
+        // ── Affichage des résultats ────────────────────────────────────────────
         function displayResults(total, patients) {
             const content = document.getElementById('resultsContent');
             content.innerHTML = '';
@@ -467,9 +636,9 @@
                     const heure = soin.heure ? soin.heure.replace(':', 'h') : '—';
                     const cat = soin.category || '';
                     const catBadge = cat ? `<span class="soin-category">${cat}</span>` : '';
+                    const dateStr = soin.date_debut ? `<span class="soin-date">depuis ${soin.date_debut}</span>` : '';
                     const item = document.createElement('div');
                     item.className = 'soin-item';
-                    const dateStr = soin.date_debut ? `<span class="soin-date">depuis ${soin.date_debut}</span>` : '';
                     item.innerHTML = `<span class="soin-heure">🕐 ${heure}</span><span class="soin-description">${catBadge}${soin.description}${dateStr}</span>`;
                     soinsDiv.appendChild(item);
                 });
@@ -481,7 +650,7 @@
             document.getElementById('resultsSection').style.display = 'block';
         }
 
-        // Export PDF
+        // ── Export PDF ────────────────────────────────────────────────────────
         document.getElementById('exportBtn').addEventListener('click', async () => {
             const data = window.exportData;
             if (!data) return;
@@ -500,7 +669,7 @@
                     a.click();
                 }
             } catch (err) {
-                showError('Erreur lors du téléchargement: ' + err.message);
+                showError('Erreur lors du téléchargement : ' + err.message);
             }
         });
 
@@ -539,7 +708,6 @@
             const soins = allSoins.filter(s => s.resident === selected);
             if (!soins.length) { content.innerHTML = '<p>Aucune prescription trouvée.</p>'; return; }
 
-            // Grouper par catégorie
             const catMap = {};
             soins.forEach(s => {
                 const cat = s.category || 'Autres';
@@ -553,7 +721,7 @@
                 section.innerHTML = `<h4 style="color:#FF6B00;margin-bottom:8px;border-bottom:1px solid #FFE0B2;padding-bottom:4px;">${cat}</h4>`;
                 items.forEach(soin => {
                     const heure = soin.heure ? soin.heure.replace(':', 'h') : '—';
-                    const dateStr = soin.date_debut ? ` <span style="color:#999;font-size:0.78rem;">depuis ${soin.date_debut}</span>` : '';
+                    const dateStr = soin.date_debut ? ` <span style="color:#999;font-size:0.76rem;">depuis ${soin.date_debut}</span>` : '';
                     const div = document.createElement('div');
                     div.className = 'soin-item';
                     div.innerHTML = `<span class="soin-heure">🕐 ${heure}</span><span class="soin-description">${soin.description}${dateStr}</span>`;
@@ -563,9 +731,10 @@
             });
         });
 
+        // ── Utilitaires ───────────────────────────────────────────────────────
         function showLoading(show) { document.getElementById('loading').style.display = show ? 'block' : 'none'; }
-        function showError(msg) { const e = document.getElementById('errorMsg'); e.textContent = msg; e.style.display = 'block'; }
-        function hideError() { document.getElementById('errorMsg').style.display = 'none'; }
+        function showError(msg)    { const e = document.getElementById('errorMsg'); e.textContent = msg; e.style.display = 'block'; }
+        function hideError()       { document.getElementById('errorMsg').style.display = 'none'; }
     </script>
 </body>
 </html>
