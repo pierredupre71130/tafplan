@@ -43,6 +43,7 @@ CARE_KEYWORDS_CONTAINS = [
     'GLYCEMIE', 'DEXTRO', 'PANSEMENT', 'TENSION',
     'STOMIE', 'ESCARRE', 'OXYGENE', 'CONSTANTES', 'DIURESE',
     'PESEE', 'EXAMEN', 'BIOLOGIE', 'HEMOCULTURE', 'UROCULTURE',
+    'BOUCHE', 'SOINS BOUCHE',
     'COMPLEMENT', 'ALIMENTAIRE', 'FORTIMEL', 'CLINUTREN', 'FORTEOCARE', 'DESSERT',
 ]
 
@@ -68,7 +69,7 @@ CATEGORY_RULES = [
     ("Évaluation", ["EVALUATION", "DOULEUR"]),
     ("Aide à la prise", ["AIDE A LA PRISE", "ACTE DE LA VIE COURANTE"]),
     ("Pose / Ablation", ["POSE ", "ABLATION", "CHANGEMENT", "ATTELLE", "CHAUSSETTES DE CONTENTION", "MATELAS"]),
-    ("Soins locaux", ["PANSEMENT", "STOMIE", "ASPIRATION", "SONDAGE", "PROTECTION"]),
+    ("Soins locaux", ["PANSEMENT", "STOMIE", "ASPIRATION", "SONDAGE", "PROTECTION", "BOUCHE", "PST "]),
     ("Kinésithérapie", ["KINE", "KINÉ", "MOBILISATION", "MARCHE"]),
     ("Contentions", ["BANDES", "BAS", "CHAUSSETTES"]),
     ("Contentions physiques", ["SANGLE", "CONTENTION", "CONTENTIONS", "BARRIERES", "BARRIERE"]),
@@ -389,6 +390,33 @@ def extract_care_acts(pdf_bytes: bytes, heure_debut: time, heure_fin: time) -> l
 
         dates_debut = re.findall(r'Début le (\d{2}/\d{2}/\d{2,4}) à \d{2}:\d{2}', text)
         blocks = re.split(r'Début le \d{2}/\d{2}/\d{2,4} à \d{2}:\d{2}', text)
+
+        # ── Demandes d'examen (pas de "Début le") ── présentes dans blocks[0] ou mélangées
+        EXAM_MAP = {
+            'RADIO': ('Radiographie', 'Imagerie & ECG'),
+            'SCANNER': ('Scanner', 'Imagerie & ECG'),
+            'IRM': ('IRM', 'Imagerie & ECG'),
+            'ECG': ('ECG', 'Imagerie & ECG'),
+            'ECHO': ('Échographie', 'Imagerie & ECG'),
+            'DOPPLER': ('Doppler', 'Imagerie & ECG'),
+            'HOLTER': ('Holter ECG', 'Imagerie & ECG'),
+            'ENDOSCOPIE': ('Endoscopie', 'Imagerie & ECG'),
+            'GASTROSCOPIE': ('Gastroscopie', 'Imagerie & ECG'),
+            'POUMON': ('Radio pulmonaire', 'Imagerie & ECG'),
+        }
+        IGNORE_EXAMS = {'CS', 'ASP', 'PROTOCOLE', 'AVIS'}
+        for search_zone in [blocks[0]] + list(blocks[1:]):
+            for m in re.finditer(r"Demande d'examen\s*\n\s*([A-Z]+)", search_zone, re.IGNORECASE):
+                exam = m.group(1).strip().upper()
+                if exam in IGNORE_EXAMS:
+                    continue
+                description, category = EXAM_MAP.get(exam, (f'Examen {exam.title()}', 'Imagerie & ECG'))
+                key = (patient, description[:50].upper(), None)
+                if key not in seen:
+                    seen.add(key)
+                    results.append({'resident': patient, 'room': room, 'heure': None,
+                                    'description': description, 'category': category,
+                                    'date_debut': None})
 
         for i, block in enumerate(blocks[1:]):
             date_debut = dates_debut[i] if i < len(dates_debut) else None
